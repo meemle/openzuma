@@ -1,3 +1,8 @@
+# Gitee Go 专用构建配置
+# 简化版，确保在线构建成功
+
+# 创建简化的gradle配置
+cat > /data/data/com.termux/files/home/openzuma/app/build_gitee.gradle << 'EOF'
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -73,3 +78,9 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
+EOF
+
+echo "✅ 已创建Gitee Go专用构建配置"
+echo "📁 文件位置: /data/data/com.termux/files/home/openzuma/app/build_gitee.gradle"
+echo ""
+echo "🚀 下一步：替换主构建配置"

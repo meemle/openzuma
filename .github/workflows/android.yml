@@ -1,0 +1,44 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+      
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: openzuma-app
+        path: app/build/outputs/apk/debug/*.apk
+        
+    - name: Show build info
+      run: |
+        echo "🎉 OpenZuma构建成功！"
+        echo "📱 APK文件已生成"
+        echo "📦 版本: 1.0"
+        echo "🔧 SDK: Android 34"
