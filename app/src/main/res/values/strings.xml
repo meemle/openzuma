@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">OpenZuma</string>
+    
+    <!-- 底部导航 -->
+    <string name="title_home">首页</string>
+    <string name="title_discover">发现</string>
+    <string name="title_camera">拍照</string>
+    <string name="title_notifications">消息</string>
+    <string name="title_profile">我的</string>
+    
+    <!-- 菜单 -->
+    <string name="action_settings">设置</string>
+    <string name="action_search">搜索</string>
+    
+    <!-- 活动标题 -->
+    <string name="title_activity_settings">设置</string>
+    <string name="title_activity_profile">个人资料</string>
+    <string name="title_activity_camera">拍照</string>
+    
+    <!-- 按钮文字 -->
+    <string name="btn_login">登录</string>
+    <string name="btn_register">注册</string>
+    <string name="btn_submit">提交</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_delete">删除</string>
+    <string name="btn_share">分享</string>
+    <string name="btn_take_photo">拍照</string>
+    <string name="btn_choose_from_gallery">从相册选择</string>
+    
+    <!-- 提示信息 -->
+    <string name="hint_email">请输入邮箱</string>
+    <string name="hint_password">请输入密码</string>
+    <string name="hint_search">搜索内容...</string>
+    
+    <!-- 消息 -->
+    <string name="msg_loading">加载中...</string>
+    <string name="msg_no_data">暂无数据</string>
+    <string name="msg_network_error">网络连接失败</string>
+    <string name="msg_operation_success">操作成功</string>
+    <string name="msg_operation_failed">操作失败</string>
+    
+    <!-- 权限请求 -->
+    <string name="permission_camera_title">相机权限</string>
+    <string name="permission_camera_message">应用需要相机权限来拍照和扫描二维码</string>
+    <string name="permission_storage_title">存储权限</string>
+    <string name="permission_storage_message">应用需要存储权限来保存和读取文件</string>
+    <string name="permission_location_title">位置权限</string>
+    <string name="permission_location_message">应用需要位置权限来提供基于位置的服务</string>
+    
+    <!-- 功能描述 -->
+    <string name="desc_open_zuma">OpenZuma - 开源智能助手</string>
+    <string name="desc_version">版本 1.0.0</string>
+    <string name="desc_about">一个功能丰富的开源Android应用，集成了多种实用功能</string>
+    
+    <!-- 标签 -->
+    <string name="tab_hot">热门</string>
+    <string name="tab_new">最新</string>
+    <string name="tab_following">关注</string>
+    <string name="tab_recommend">推荐</string>
+    
+    <!-- 错误提示 -->
+    <string name="error_email_empty">邮箱不能为空</string>
+    <string name="error_password_empty">密码不能为空</string>
+    <string name="error_invalid_email">邮箱格式不正确</string>
+    <string name="error_password_too_short">密码长度不能少于6位</string>
+</resources>
