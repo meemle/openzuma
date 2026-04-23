@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@id/navigation_calendar">
+
+    <!-- 日历主页面 -->
+    <fragment
+        android:id="@+id/navigation_calendar"
+        android:name="com.example.openzuma.ui.calendar.CalendarFragment"
+        android:label="@string/title_calendar"
+        tools:layout="@layout/fragment_calendar">
+        
+        <!-- 跳转到日程编辑页面 -->
+        <action
+            android:id="@+id/action_calendarFragment_to_scheduleEditFragment"
+            app:destination="@id/scheduleEditFragment"
+            app:popUpTo="@id/navigation_calendar"
+            app:popUpToInclusive="false" />
+            
+        <!-- 跳转到日程详情页面 -->
+        <action
+            android:id="@+id/action_calendarFragment_to_scheduleDetailFragment"
+            app:destination="@id/scheduleDetailFragment"
+            app:popUpTo="@id/navigation_calendar"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <!-- 日程编辑页面 -->
+    <fragment
+        android:id="@+id/scheduleEditFragment"
+        android:name="com.example.openzuma.ui.calendar.ScheduleEditFragment"
+        android:label="@string/title_schedule_edit"
+        tools:layout="@layout/fragment_schedule_edit">
+        
+        <argument
+            android:name="scheduleId"
+            app:argType="string"
+            android:defaultValue="" />
+            
+        <argument
+            android:name="selectedDate"
+            app:argType="long"
+            android:defaultValue="0" />
+    </fragment>
+
+    <!-- 日程详情页面 -->
+    <fragment
+        android:id="@+id/scheduleDetailFragment"
+        android:name="com.example.openzuma.ui.calendar.ScheduleDetailFragment"
+        android:label="@string/title_schedule_detail"
+        tools:layout="@layout/fragment_schedule_detail">
+        
+        <argument
+            android:name="scheduleId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <!-- 首页（保留原有导航） -->
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.openzuma.ui.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_discover"
+        android:name="com.example.openzuma.ui.discover.DiscoverFragment"
+        android:label="@string/title_discover"
+        tools:layout="@layout/fragment_discover" />
+
+    <fragment
+        android:id="@+id/navigation_camera"
+        android:name="com.example.openzuma.ui.camera.CameraFragment"
+        android:label="@string/title_camera"
+        tools:layout="@layout/fragment_camera" />
+
+    <fragment
+        android:id="@+id/navigation_notifications"
+        android:name="com.example.openzuma.ui.notifications.NotificationsFragment"
+        android:label="@string/title_notifications"
+        tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.example.openzuma.ui.profile.ProfileFragment"
+        android:label="@string/title_profile"
+        tools:layout="@layout/fragment_profile" />
+
+</navigation>

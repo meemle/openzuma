@@ -45,4 +45,24 @@
     <!-- 阴影 -->
     <color name="shadow">#1F000000</color>
     <color name="overlay">#33000000</color>
+    
+    <!-- 日历相关颜色 -->
+    <color name="calendar_blue">#2196F3</color>
+    <color name="calendar_green">#4CAF50</color>
+    <color name="calendar_orange">#FF9800</color>
+    <color name="calendar_red">#F44336</color>
+    <color name="calendar_purple">#9C27B0</color>
+    <color name="calendar_yellow">#FFEB3B</color>
+    <color name="calendar_cyan">#00BCD4</color>
+    
+    <!-- 日历状态 -->
+    <color name="calendar_today_bg">#2196F3</color>
+    <color name="calendar_selected_bg">#E3F2FD</color>
+    <color name="calendar_weekend_text">#F44336</color>
+    <color name="calendar_other_month_text">#BDBDBD</color>
+    
+    <!-- Material Design 3 颜色系统 -->
+    <color name="onSurface">#1D1B20</color>
+    <color name="onSurfaceVariant">#49454F</color>
+    <color name="outlineVariant">#CAC4D0</color>
 </resources>
