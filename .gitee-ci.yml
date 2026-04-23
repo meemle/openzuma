@@ -1,0 +1,56 @@
+# Gitee Go 配置 - OpenZuma Android构建
+
+image: openjdk:17-jdk
+
+variables:
+  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+
+stages:
+  - build
+
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+  - chmod +x ./gradlew
+
+build_android:
+  stage: build
+  script:
+    # 安装Android SDK
+    - apt-get update && apt-get install -y wget unzip
+    - wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O /tmp/cmdline-tools.zip
+    - mkdir -p /opt/android-sdk
+    - unzip -q /tmp/cmdline-tools.zip -d /opt/android-sdk
+    - export ANDROID_HOME=/opt/android-sdk
+    - export PATH=$PATH:/opt/android-sdk/cmdline-tools/bin
+    
+    # 接受SDK许可
+    - yes | sdkmanager --licenses || true
+    
+    # 安装必要的Android组件
+    - sdkmanager "platforms;android-34"
+    - sdkmanager "build-tools;34.0.0"
+    - sdkmanager "platform-tools"
+    
+    # 构建APK
+    - ./gradlew clean
+    - ./gradlew assembleDebug
+    
+    # 显示构建结果
+    - echo "🎉 OpenZuma APK构建成功！"
+    - echo "📱 生成的APK文件："
+    - ls -lh app/build/outputs/apk/debug/
+    
+  artifacts:
+    paths:
+      - app/build/outputs/apk/debug/*.apk
+    expire_in: 7 days
+    
+  only:
+    - master
+    - main
