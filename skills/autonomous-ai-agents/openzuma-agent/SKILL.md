@@ -7,7 +7,7 @@ license: MIT
 metadata:
   openzuma:
     tags: [openzuma, setup, configuration, multi-agent, spawning, cli, gateway, development]
-    homepage: https://github.com/NousResearch/openzuma-agent
+    homepage: https://github.com/meemle/openzuma
     related_skills: [claude-code, codex, opencode]
 ---
 
@@ -34,7 +34,7 @@ People use Openzuma for software development, research, system administration, d
 
 ```bash
 # Install
-curl -fsSL https://raw.githubusercontent.com/NousResearch/openzuma-agent/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meemle/openzuma/main/scripts/install.sh | bash
 
 # Interactive chat (default)
 openzuma

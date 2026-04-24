@@ -214,7 +214,7 @@ If you've worked through this guide and the issue persists:
 
 1. Run the job with `openzuma cron run <job_id>` (fires on next gateway tick) and watch for errors in the chat output
 2. Check `~/.openzuma/logs/agent.log` for scheduler messages and `~/.openzuma/logs/errors.log` for warnings
-3. Open an issue at [github.com/NousResearch/openzuma-agent](https://github.com/NousResearch/openzuma-agent) with:
+3. Open an issue at [github.com/meemle/openzuma](https://github.com/meemle/openzuma) with:
    - The job ID and schedule
    - The delivery target
    - What you expected vs. what happened

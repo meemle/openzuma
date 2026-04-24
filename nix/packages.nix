@@ -106,7 +106,7 @@
 
           meta = with pkgs.lib; {
             description = "AI agent with advanced tool-calling capabilities";
-            homepage = "https://github.com/NousResearch/openzuma-agent";
+            homepage = "https://github.com/meemle/openzuma";
             mainProgram = "openzuma";
             license = licenses.mit;
             platforms = platforms.unix;

@@ -79,7 +79,7 @@ def _discord_request(
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
-            "User-Agent": "Openzuma-Agent (https://github.com/NousResearch/openzuma-agent)",
+            "User-Agent": "Openzuma-Agent (https://github.com/meemle/openzuma)",
         },
     )
 

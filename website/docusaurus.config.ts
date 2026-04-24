@@ -51,7 +51,7 @@ const config: Config = {
         docs: {
           routeBasePath: '/',  // Docs at the root of /docs/
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/NousResearch/openzuma-agent/edit/main/website/',
+          editUrl: 'https://github.com/meemle/openzuma/edit/main/website/',
         },
         blog: false,
         theme: {
@@ -97,7 +97,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/NousResearch/openzuma-agent',
+          href: 'https://github.com/meemle/openzuma',
           label: 'GitHub',
           position: 'right',
         },
@@ -124,14 +124,14 @@ const config: Config = {
           title: 'Community',
           items: [
             { label: 'Discord', href: 'https://discord.gg/NousResearch' },
-            { label: 'GitHub Discussions', href: 'https://github.com/NousResearch/openzuma-agent/discussions' },
+            { label: 'GitHub Discussions', href: 'https://github.com/meemle/openzuma/discussions' },
             { label: 'Skills Hub', href: 'https://agentskills.io' },
           ],
         },
         {
           title: 'More',
           items: [
-            { label: 'GitHub', href: 'https://github.com/NousResearch/openzuma-agent' },
+            { label: 'GitHub', href: 'https://github.com/meemle/openzuma' },
             { label: 'Nous Research', href: 'https://nousresearch.com' },
           ],
         },

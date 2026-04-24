@@ -153,7 +153,7 @@ Full automation templates gallery: [openzuma-agent.nousresearch.com/docs/guides/
 
 Documentation: [openzuma-agent.nousresearch.com](https://openzuma-agent.nousresearch.com)
 
-GitHub: [github.com/NousResearch/openzuma-agent](https://github.com/NousResearch/openzuma-agent)
+GitHub: [github.com/meemle/openzuma](https://github.com/meemle/openzuma)
 
 ---
 

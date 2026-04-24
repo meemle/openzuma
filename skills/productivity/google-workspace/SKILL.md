@@ -7,7 +7,7 @@ license: MIT
 metadata:
   openzuma:
     tags: [Google, Gmail, Calendar, Drive, Sheets, Docs, Contacts, Email, OAuth]
-    homepage: https://github.com/NousResearch/openzuma-agent
+    homepage: https://github.com/meemle/openzuma
     related_skills: [himalaya]
 ---
 

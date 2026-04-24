@@ -35,11 +35,11 @@ No clone needed. Nix fetches, builds, and runs everything:
 
 ```bash
 # Run directly (builds on first use, cached after)
-nix run github:NousResearch/openzuma-agent -- setup
-nix run github:NousResearch/openzuma-agent -- chat
+nix run github:meemle/openzuma -- setup
+nix run github:meemle/openzuma -- chat
 
 # Or install persistently
-nix profile install github:NousResearch/openzuma-agent
+nix profile install github:meemle/openzuma
 openzuma setup
 openzuma chat
 ```
@@ -50,7 +50,7 @@ After `nix profile install`, `openzuma`, `openzuma-agent`, and `openzuma-acp` ar
 <summary><strong>Building from a local clone</strong></summary>
 
 ```bash
-git clone https://github.com/NousResearch/openzuma-agent.git
+git clone https://github.com/meemle/openzuma.git
 cd openzuma-agent
 nix build
 ./result/bin/openzuma setup
@@ -75,7 +75,7 @@ This module requires NixOS. For non-NixOS systems (macOS, other Linux distros), 
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    openzuma-agent.url = "github:NousResearch/openzuma-agent";
+    openzuma-agent.url = "github:meemle/openzuma";
   };
 
   outputs = { nixpkgs, openzuma-agent, ... }: {

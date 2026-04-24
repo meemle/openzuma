@@ -46,7 +46,7 @@ That does not stop Openzuma from working well as a phone-native CLI agent — it
 Openzuma now ships a Termux-aware installer path:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/NousResearch/openzuma-agent/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meemle/openzuma/main/scripts/install.sh | bash
 ```
 
 On Termux, the installer automatically:
@@ -80,7 +80,7 @@ Why these packages?
 ### 2. Clone Openzuma
 
 ```bash
-git clone --recurse-submodules https://github.com/NousResearch/openzuma-agent.git
+git clone --recurse-submodules https://github.com/meemle/openzuma.git
 cd openzuma-agent
 ```
 

@@ -4,8 +4,8 @@ Verifies that Openzuma-managed provider, tool, and gateway env vars are
 stripped from subprocess environments so external CLIs are not silently
 misrouted or handed Openzuma secrets.
 
-See: https://github.com/NousResearch/openzuma-agent/issues/1002
-See: https://github.com/NousResearch/openzuma-agent/issues/1264
+See: https://github.com/meemle/openzuma/issues/1002
+See: https://github.com/meemle/openzuma/issues/1264
 """
 
 import os

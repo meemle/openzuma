@@ -15,19 +15,19 @@ Openzuma isn't just a CLI tool. You can import `AIAgent` directly and use it pro
 Install Openzuma directly from the repository:
 
 ```bash
-pip install git+https://github.com/NousResearch/openzuma-agent.git
+pip install git+https://github.com/meemle/openzuma.git
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv pip install git+https://github.com/NousResearch/openzuma-agent.git
+uv pip install git+https://github.com/meemle/openzuma.git
 ```
 
 You can also pin it in your `requirements.txt`:
 
 ```text
-openzuma-agent @ git+https://github.com/NousResearch/openzuma-agent.git
+openzuma-agent @ git+https://github.com/meemle/openzuma.git
 ```
 
 :::tip
