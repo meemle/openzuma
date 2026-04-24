@@ -40,12 +40,14 @@ openzuma-agent/
 ```bash
 pip install -e .
 ```
-
-### 运行CLI版本
+### 查看openzuma版本
 ```bash
-python -m openzuma_cli.main
+openzuma --version
 ```
-
+### 运行openzuma
+```bash
+openzuma #即可进入交互式对话界面
+```
 ### 配置
 1. 复制 `config.yaml.example` 为 `~/.openzuma/config.yaml`
 2. 配置API密钥和模型设置
