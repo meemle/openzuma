@@ -1,4 +1,4 @@
-# Openzuma - 智能助手源码
+# OpenZuma - 智能助手源码
 
 牵来一匹始祖马，
 潜心修炼御马术；
@@ -7,7 +7,7 @@
 
 ## 🚀 项目简介
 
-Openzuma  是一个功能强大的AI智能助手系统，支持：
+OpenZuma  是一个功能强大的AI智能助手系统，支持：
 - 多平台接入（微信、Telegram、Discord、Slack等）
 - 丰富的工具集（终端、文件操作、网络搜索、代码执行等）
 - 技能系统（可扩展的功能模块）
@@ -40,11 +40,11 @@ openzuma/
 ```bash
 pip install -e .
 ```
-### 查看openzuma版本
+### 查看OpenZuma版本
 ```bash
 openzuma --version
 ```
-### 运行openzuma
+### 运行OpenZuma
 ```bash
 openzuma #即可进入交互式对话界面
 ```
@@ -65,7 +65,7 @@ openzuma #即可进入交互式对话界面
 
 ## 🛠️ 工具集
 
-Openzuma 支持丰富的工具集：
+OpenZuma 支持丰富的工具集：
 - ✅ 终端命令执行
 - ✅ 文件读写操作
 - ✅ 网络搜索和内容提取
