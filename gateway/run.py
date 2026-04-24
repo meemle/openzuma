@@ -744,24 +744,24 @@ class GatewayRunner:
         # Track background tasks to prevent garbage collection mid-execution
         self._background_tasks: set = set()
 
-        # Heart module - proactive heartbeat for autonomous messaging
-        self.heart = None
+        # Soul module - proactive heartbeat for autonomous messaging
+        self.soul = None
         try:
-            from heart.integration import load_heart_config, create_heartbeat
+            from soul.integration import load_soul_config, create_heartbeat
             from openzuma_cli.config import load_config as _load_full_config
             _full_cfg = _load_full_config()
-            _heart_cfg = load_heart_config(_full_cfg)
-            if _heart_cfg.get("enabled"):
-                self.heart = create_heartbeat(
-                    deliver_func=self._heartbeat_deliver,
-                    config=_heart_cfg,
+            _soul_cfg = load_soul_config(_full_cfg)
+            if _soul_cfg.get("enabled"):
+                self.soul = create_heartbeat(
+                    deliver_func=self._soul_deliver,
+                    config=_soul_cfg,
                 )
-                logger.info("♥ Heart module initialized")
+                logger.info("♥ Soul module initialized")
         except Exception as e:
-            logger.debug("Heart module not available: %s", e)
+            logger.debug("Soul module not available: %s", e)
 
-    async def _heartbeat_deliver(self, message: str) -> bool:
-        """Heart deliver function - routes through DeliveryRouter (platform-agnostic)"""
+    async def _soul_deliver(self, message: str) -> bool:
+        """Soul deliver function - routes through DeliveryRouter (platform-agnostic)"""
         try:
             from gateway.delivery import DeliveryTarget
             targets = []
@@ -2312,10 +2312,10 @@ class GatewayRunner:
             )
         asyncio.create_task(self._platform_reconnect_watcher())
 
-        # Start heart module if initialized
-        if self.heart:
-            self.heart.start()
-            logger.info("♥ Heart is beating every %d minutes", self.heart.interval_minutes)
+        # Start soul module if initialized
+        if self.soul:
+            self.soul.start()
+            logger.info("♥ Soul is beating every %d minutes", self.soul.interval_minutes)
 
         logger.info("Press Ctrl+C to stop")
         
@@ -2625,10 +2625,10 @@ class GatewayRunner:
             self._running = False
             self._draining = True
 
-            # Stop heart module
-            if self.heart:
-                self.heart.stop()
-                logger.info("♥ Heart stopped")
+            # Stop soul module
+            if self.soul:
+                self.soul.stop()
+                logger.info("♥ Soul stopped")
 
             # Notify all chats with active agents BEFORE draining.
             # Adapters are still connected here, so messages can be sent.

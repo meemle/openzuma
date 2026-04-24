@@ -104,7 +104,7 @@ class Heartbeat:
     
     用法（在GatewayRunner中）:
         heart = Heartbeat(deliver_func=gateway_runner.heartbeat_deliver)
-        heart.start()  # 启动心跳循环
+        soul.start()  # 启动心跳循环
     
     配置（config.yaml）:
         heart:

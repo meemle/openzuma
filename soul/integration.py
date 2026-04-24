@@ -13,7 +13,7 @@ from typing import Optional, Dict, Any, List
 
 from .heartbeat import Heartbeat
 
-logger = logging.getLogger("openzuma.heart.integration")
+logger = logging.getLogger("openzuma.soul.integration")
 
 
 def load_heart_config(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -31,7 +31,7 @@ def load_heart_config(config: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         dict with keys: enabled, interval_minutes, custom_topics
     """
-    heart_cfg = config.get("heart", {})
+    heart_cfg = config.get("soul", {})
     return {
         "enabled": heart_cfg.get("enabled", False),
         "interval_minutes": heart_cfg.get("interval_minutes", 10),
@@ -57,7 +57,7 @@ def create_heartbeat(
         config = {"enabled": False, "interval_minutes": 10, "custom_topics": []}
     
     if not config.get("enabled", False):
-        logger.info("♥ Heart模块未启用（heart.enabled未设为true）")
+        logger.info("♥ Heart模块未启用（soul.enabled未设为true）")
         return None
     
     topics = None
