@@ -1,98 +1,90 @@
-# OpenZuma
+# Hermes Agent - 智能助手源码
 
-一个完整的Android应用项目，可以在安卓手机上部署运行。
+这是完整的 Hermes Agent 智能助手系统源码。
 
-## 项目简介
+## 🚀 项目简介
 
-OpenZuma 是一个功能丰富的开源Android应用，采用现代化的Android开发技术栈，包括Kotlin、MVVM架构、Jetpack组件等。项目设计注重代码质量、可维护性和用户体验。
+Hermes Agent 是一个功能强大的AI智能助手系统，支持：
+- 多平台接入（微信、Telegram、Discord、Slack等）
+- 丰富的工具集（终端、文件操作、网络搜索、代码执行等）
+- 技能系统（可扩展的功能模块）
+- 定时任务调度
+- 多模型支持（Claude、GPT、DeepSeek等）
 
-## 项目特点
-
-- 🚀 **现代化架构**：采用MVVM架构，使用Kotlin开发
-- 🎨 **Material Design 3**：遵循最新的Material Design设计规范
-- 🔧 **多模块化**：清晰的项目结构，便于维护和扩展
-- 📱 **多屏幕适配**：支持各种屏幕尺寸和分辨率
-- 🔐 **权限管理**：完善的权限请求和处理机制
-- 🌐 **网络请求**：集成Retrofit + OkHttp进行网络通信
-- 💾 **本地存储**：使用Room数据库进行数据持久化
-- 🖼️ **图片加载**：集成Glide进行图片加载和缓存
-
-## 技术栈
-
-- **开发语言**: Kotlin 100%
-- **架构模式**: MVVM (Model-View-ViewModel)
-- **UI框架**: Jetpack Compose + XML布局
-- **网络层**: Retrofit2 + OkHttp3 + Gson
-- **数据库**: Room
-- **图片加载**: Glide
-- **依赖注入**: Hilt
-- **导航**: Navigation Component
-
-## 快速开始
-
-### 环境要求
-
-- Android Studio Arctic Fox (2020.3.1) 或更高版本
-- JDK 11 或更高版本
-- Android SDK API 级别 31 或更高
-
-### 构建步骤
-
-1. 克隆项目到本地
-2. 使用Android Studio打开项目
-3. 等待Gradle同步完成
-4. 连接Android设备或启动模拟器
-5. 点击运行按钮
-
-## 项目结构
+## 📁 项目结构
 
 ```
-openzuma/
-├── app/                  # 主模块
-│   ├── src/main/java/com/openzuma/   # 主代码目录
-│   ├── src/main/res/     # 资源文件
-│   └── build.gradle.kts  # 模块构建配置
-├── build.gradle.kts      # 项目构建配置
-├── settings.gradle.kts   # 项目设置
-└── gradle.properties     # Gradle属性配置
+hermes-agent/
+├── run_agent.py          # AIAgent核心类
+├── model_tools.py        # 工具编排
+├── toolsets.py           # 工具集定义
+├── cli.py                # 命令行界面
+├── hermes_state.py       # 会话数据库
+├── agent/                # 代理内部模块
+├── tools/                # 工具实现
+├── gateway/              # 消息平台网关
+├── ui-tui/               # 终端用户界面
+├── tui_gateway/          # TUI JSON-RPC后端
+├── acp_adapter/          # ACP服务器
+├── cron/                 # 定时任务调度
+├── tests/                # 测试套件
+└── batch_runner.py       # 批量处理
 ```
 
-## 功能模块
+## 🔧 快速开始
 
-### 已实现功能
+### 安装依赖
+```bash
+pip install -r requirements.txt
+```
 
-1. **用户认证**：登录、注册、密码找回
-2. **个人信息管理**：个人信息查看和编辑
-3. **数据展示**：列表展示、详情查看
-4. **设置页面**：应用设置、关于我们
+### 运行CLI版本
+```bash
+python -m hermes_agent.cli.main
+```
 
-### 计划功能
+### 配置
+1. 复制 `config.yaml.example` 为 `~/.hermes/config.yaml`
+2. 配置API密钥和模型设置
+3. 根据需要配置平台适配器
 
-1. **消息推送**：集成Firebase Cloud Messaging
-2. **文件上传**：支持图片、文档上传
-3. **离线缓存**：增强离线使用体验
-4. **主题切换**：支持深色/浅色主题
+## 🌐 支持的平台
 
-## 贡献指南
+- **CLI**: 本地命令行界面
+- **微信**: 通过clawbot对接
+- **Telegram**: 官方Bot API
+- **Discord**: Bot集成
+- **Slack**: App集成
+- **WhatsApp**: 通过WhatsApp Business API
+- **Signal**: 通过signal-cli
 
-欢迎贡献代码！请遵循以下步骤：
+## 🛠️ 工具集
 
-1. Fork本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建Pull Request
+Hermes 支持丰富的工具集：
+- ✅ 终端命令执行
+- ✅ 文件读写操作
+- ✅ 网络搜索和内容提取
+- ✅ 代码执行和调试
+- ✅ 技能管理系统
+- ✅ 定时任务调度
+- ✅ 记忆和会话搜索
+- ✅ 多代理协作
 
-## 许可证
+## 📚 文档
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+详细文档请参考：
+- `AGENTS.md` - 开发指南
+- `README_DEV.md` - 开发者文档
+- `docs/` - 完整文档
 
-## 联系方式
+## 📄 许可证
 
-- **项目维护者**: [你的名字]
-- **邮箱**: [你的邮箱]
-- **项目地址**: [GitHub仓库地址]
+MIT License
 
----
+## 🤝 贡献
 
-感谢使用 OpenZuma！🚀
+欢迎提交Issue和Pull Request！
+
+## 📞 联系
+
+如有问题，请通过GitHub Issues反馈。
