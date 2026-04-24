@@ -35,12 +35,12 @@ openzuma-agent/
 
 ### 安装依赖
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### 运行CLI版本
 ```bash
-python -m openzuma_agent.cli.main
+python -m openzuma_cli.main
 ```
 
 ### 配置
