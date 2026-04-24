@@ -1,10 +1,10 @@
-# Hermes Agent - 智能助手源码
+# Openzuma Agent - 智能助手源码
 
-这是完整的 Hermes Agent 智能助手系统源码。
+这是完整的 Openzuma Agent 智能助手系统源码。
 
 ## 🚀 项目简介
 
-Hermes Agent 是一个功能强大的AI智能助手系统，支持：
+Openzuma Agent 是一个功能强大的AI智能助手系统，支持：
 - 多平台接入（微信、Telegram、Discord、Slack等）
 - 丰富的工具集（终端、文件操作、网络搜索、代码执行等）
 - 技能系统（可扩展的功能模块）
@@ -14,12 +14,12 @@ Hermes Agent 是一个功能强大的AI智能助手系统，支持：
 ## 📁 项目结构
 
 ```
-hermes-agent/
+openzuma-agent/
 ├── run_agent.py          # AIAgent核心类
 ├── model_tools.py        # 工具编排
 ├── toolsets.py           # 工具集定义
 ├── cli.py                # 命令行界面
-├── hermes_state.py       # 会话数据库
+├── openzuma_state.py       # 会话数据库
 ├── agent/                # 代理内部模块
 ├── tools/                # 工具实现
 ├── gateway/              # 消息平台网关
@@ -40,11 +40,11 @@ pip install -r requirements.txt
 
 ### 运行CLI版本
 ```bash
-python -m hermes_agent.cli.main
+python -m openzuma_agent.cli.main
 ```
 
 ### 配置
-1. 复制 `config.yaml.example` 为 `~/.hermes/config.yaml`
+1. 复制 `config.yaml.example` 为 `~/.openzuma/config.yaml`
 2. 配置API密钥和模型设置
 3. 根据需要配置平台适配器
 
@@ -60,7 +60,7 @@ python -m hermes_agent.cli.main
 
 ## 🛠️ 工具集
 
-Hermes 支持丰富的工具集：
+Openzuma 支持丰富的工具集：
 - ✅ 终端命令执行
 - ✅ 文件读写操作
 - ✅ 网络搜索和内容提取

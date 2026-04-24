@@ -1,5 +1,5 @@
-import type { InputEvent, Key } from '@hermes/ink'
-import * as Ink from '@hermes/ink'
+import type { InputEvent, Key } from '@openzuma/ink'
+import * as Ink from '@openzuma/ink'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { setInputSelection } from '../app/inputSelectionStore.js'

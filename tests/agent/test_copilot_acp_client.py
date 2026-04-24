@@ -50,16 +50,16 @@ class CopilotACPClientSafetyTests(unittest.TestCase):
         outcome = (((response.get("result") or {}).get("outcome") or {}).get("outcome"))
         self.assertEqual(outcome, "cancelled")
 
-    def test_read_text_file_blocks_internal_hermes_hub_files(self) -> None:
+    def test_read_text_file_blocks_internal_openzuma_hub_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             home = Path(tmpdir) / "home"
-            blocked = home / ".hermes" / "skills" / ".hub" / "index-cache" / "entry.json"
+            blocked = home / ".openzuma" / "skills" / ".hub" / "index-cache" / "entry.json"
             blocked.parent.mkdir(parents=True, exist_ok=True)
             blocked.write_text('{"token":"sk-test-secret-1234567890"}')
 
             with patch.dict(
                 os.environ,
-                {"HOME": str(home), "HERMES_HOME": str(home / ".hermes")},
+                {"HOME": str(home), "OPENZUMA_HOME": str(home / ".openzuma")},
                 clear=False,
             ):
                 response = self._dispatch(
@@ -124,7 +124,7 @@ class CopilotACPClientSafetyTests(unittest.TestCase):
             safe_root.mkdir()
             outside = root / "outside.txt"
 
-            with patch.dict(os.environ, {"HERMES_WRITE_SAFE_ROOT": str(safe_root)}, clear=False):
+            with patch.dict(os.environ, {"OPENZUMA_WRITE_SAFE_ROOT": str(safe_root)}, clear=False):
                 response = self._dispatch(
                     {
                         "jsonrpc": "2.0",

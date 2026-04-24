@@ -5,10 +5,10 @@
 { inputs, ... }: {
   perSystem = { pkgs, system, ... }:
     let
-      hermes-agent = inputs.self.packages.${system}.default;
-      hermes-tui = inputs.self.packages.${system}.tui;
-      hermes-web = inputs.self.packages.${system}.web;
-      packages = [ hermes-agent hermes-tui hermes-web ];
+      openzuma-agent = inputs.self.packages.${system}.default;
+      openzuma-tui = inputs.self.packages.${system}.tui;
+      openzuma-web = inputs.self.packages.${system}.web;
+      packages = [ openzuma-agent openzuma-tui openzuma-web ];
     in {
       devShells.default = pkgs.mkShell {
         inputsFrom = packages;
@@ -20,9 +20,9 @@
           hooks = map (p: p.passthru.devShellHook or "") packages;
           combined = pkgs.lib.concatStringsSep "\n" (builtins.filter (h: h != "") hooks);
         in ''
-          echo "Hermes Agent dev shell"
+          echo "Openzuma Agent dev shell"
           ${combined}
-          echo "Ready. Run 'hermes' to start."
+          echo "Ready. Run 'openzuma' to start."
         '';
       };
     };

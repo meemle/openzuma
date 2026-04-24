@@ -45,7 +45,7 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Hermes specific
+# Openzuma specific
 *.db
 *.db-*
 state.db*

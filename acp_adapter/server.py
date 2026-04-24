@@ -1,4 +1,4 @@
-"""ACP agent server — exposes Hermes Agent via the Agent Client Protocol."""
+"""ACP agent server — exposes Openzuma Agent via the Agent Client Protocol."""
 
 from __future__ import annotations
 
@@ -65,9 +65,9 @@ from acp_adapter.session import SessionManager, SessionState
 logger = logging.getLogger(__name__)
 
 try:
-    from hermes_cli import __version__ as HERMES_VERSION
+    from openzuma_cli import __version__ as OPENZUMA_VERSION
 except Exception:
-    HERMES_VERSION = "0.0.0"
+    OPENZUMA_VERSION = "0.0.0"
 
 # Thread pool for running AIAgent (synchronous) in parallel.
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="acp-agent")
@@ -98,8 +98,8 @@ def _extract_text(
     return "\n".join(parts)
 
 
-class HermesACPAgent(acp.Agent):
-    """ACP Agent implementation wrapping Hermes AIAgent."""
+class OpenzumaACPAgent(acp.Agent):
+    """ACP Agent implementation wrapping Openzuma AIAgent."""
 
     _SLASH_COMMANDS = {
         "help": "Show available commands",
@@ -108,7 +108,7 @@ class HermesACPAgent(acp.Agent):
         "context": "Show conversation context info",
         "reset": "Clear conversation history",
         "compact": "Compress conversation context",
-        "version": "Show Hermes version",
+        "version": "Show Openzuma version",
     }
 
     _ADVERTISED_COMMANDS = (
@@ -139,7 +139,7 @@ class HermesACPAgent(acp.Agent):
         },
         {
             "name": "version",
-            "description": "Show Hermes version",
+            "description": "Show Openzuma version",
         },
     )
 
@@ -172,7 +172,7 @@ class HermesACPAgent(acp.Agent):
         provider = getattr(state.agent, "provider", None) or detect_provider() or "openrouter"
 
         try:
-            from hermes_cli.models import curated_models_for_provider, normalize_provider, provider_label
+            from openzuma_cli.models import curated_models_for_provider, normalize_provider, provider_label
 
             normalized_provider = normalize_provider(provider)
             provider_name = provider_label(normalized_provider)
@@ -235,7 +235,7 @@ class HermesACPAgent(acp.Agent):
         new_model = raw_model.strip()
 
         try:
-            from hermes_cli.models import detect_provider_for_model, parse_model_input
+            from openzuma_cli.models import detect_provider_for_model, parse_model_input
 
             target_provider, new_model = parse_model_input(new_model, current_provider)
             if target_provider == current_provider:
@@ -287,7 +287,7 @@ class HermesACPAgent(acp.Agent):
         try:
             from model_tools import get_tool_definitions
 
-            enabled_toolsets = getattr(state.agent, "enabled_toolsets", None) or ["hermes-acp"]
+            enabled_toolsets = getattr(state.agent, "enabled_toolsets", None) or ["openzuma-acp"]
             disabled_toolsets = getattr(state.agent, "disabled_toolsets", None)
             state.agent.tools = get_tool_definitions(
                 enabled_toolsets=enabled_toolsets,
@@ -331,7 +331,7 @@ class HermesACPAgent(acp.Agent):
                 AuthMethodAgent(
                     id=provider,
                     name=f"{provider} runtime credentials",
-                    description=f"Authenticate Hermes using the currently configured {provider} runtime credentials.",
+                    description=f"Authenticate Openzuma using the currently configured {provider} runtime credentials.",
                 )
             ]
 
@@ -344,7 +344,7 @@ class HermesACPAgent(acp.Agent):
 
         return InitializeResponse(
             protocol_version=acp.PROTOCOL_VERSION,
-            agent_info=Implementation(name="hermes-agent", version=HERMES_VERSION),
+            agent_info=Implementation(name="openzuma-agent", version=OPENZUMA_VERSION),
             agent_capabilities=AgentCapabilities(
                 load_session=True,
                 session_capabilities=SessionCapabilities(
@@ -361,7 +361,7 @@ class HermesACPAgent(acp.Agent):
         # provider we advertised in initialize(). Without this check,
         # authenticate() would acknowledge any method_id as long as the
         # server has provider credentials configured — harmless under
-        # Hermes' threat model (ACP is stdio-only, local-trust), but poor
+        # Openzuma' threat model (ACP is stdio-only, local-trust), but poor
         # API hygiene and confusing if ACP ever grows multi-method auth.
         provider = detect_provider()
         if not provider:
@@ -505,7 +505,7 @@ class HermesACPAgent(acp.Agent):
         session_id: str,
         **kwargs: Any,
     ) -> PromptResponse:
-        """Run Hermes on the user's prompt and stream events back to the editor."""
+        """Run Openzuma on the user's prompt and stream events back to the editor."""
         state = self.session_manager.get_session(session_id)
         if state is None:
             logger.error("prompt: session %s not found", session_id)
@@ -558,12 +558,12 @@ class HermesACPAgent(acp.Agent):
         # Approval callback is per-thread (thread-local, GHSA-qg5c-hvr5-hjgr).
         # Set it INSIDE _run_agent so the TLS write happens in the executor
         # thread — setting it here would write to the event-loop thread's TLS,
-        # not the executor's. Also set HERMES_INTERACTIVE so approval.py
+        # not the executor's. Also set OPENZUMA_INTERACTIVE so approval.py
         # takes the CLI-interactive path (which calls the registered
         # callback via prompt_dangerous_approval) instead of the
         # non-interactive auto-approve branch (GHSA-96vc-wcxf-jjff).
         # ACP's conn.request_permission maps cleanly to the interactive
-        # callback shape — not the gateway-queue HERMES_EXEC_ASK path,
+        # callback shape — not the gateway-queue OPENZUMA_EXEC_ASK path,
         # which requires a notify_cb registered in _gateway_notify_cbs.
         previous_approval_cb = None
         previous_interactive = None
@@ -579,8 +579,8 @@ class HermesACPAgent(acp.Agent):
                     logger.debug("Could not set ACP approval callback", exc_info=True)
             # Signal to tools.approval that we have an interactive callback
             # and the non-interactive auto-approve path must not fire.
-            previous_interactive = os.environ.get("HERMES_INTERACTIVE")
-            os.environ["HERMES_INTERACTIVE"] = "1"
+            previous_interactive = os.environ.get("OPENZUMA_INTERACTIVE")
+            os.environ["OPENZUMA_INTERACTIVE"] = "1"
             try:
                 result = agent.run_conversation(
                     user_message=user_text,
@@ -592,11 +592,11 @@ class HermesACPAgent(acp.Agent):
                 logger.exception("Agent error in session %s", session_id)
                 return {"final_response": f"Error: {e}", "messages": state.history}
             finally:
-                # Restore HERMES_INTERACTIVE.
+                # Restore OPENZUMA_INTERACTIVE.
                 if previous_interactive is None:
-                    os.environ.pop("HERMES_INTERACTIVE", None)
+                    os.environ.pop("OPENZUMA_INTERACTIVE", None)
                 else:
-                    os.environ["HERMES_INTERACTIVE"] = previous_interactive
+                    os.environ["OPENZUMA_INTERACTIVE"] = previous_interactive
                 if approval_cb:
                     try:
                         from tools import terminal_tool as _terminal_tool
@@ -754,7 +754,7 @@ class HermesACPAgent(acp.Agent):
     def _cmd_tools(self, args: str, state: SessionState) -> str:
         try:
             from model_tools import get_tool_definitions
-            toolsets = getattr(state.agent, "enabled_toolsets", None) or ["hermes-acp"]
+            toolsets = getattr(state.agent, "enabled_toolsets", None) or ["openzuma-acp"]
             tools = get_tool_definitions(enabled_toolsets=toolsets, quiet_mode=True)
             if not tools:
                 return "No tools available."
@@ -836,7 +836,7 @@ class HermesACPAgent(acp.Agent):
             return f"Compression failed: {e}"
 
     def _cmd_version(self, args: str, state: SessionState) -> str:
-        return f"Hermes Agent v{HERMES_VERSION}"
+        return f"Openzuma Agent v{OPENZUMA_VERSION}"
 
     # ---- Model switching (ACP protocol method) -------------------------------
 
@@ -890,7 +890,7 @@ class HermesACPAgent(acp.Agent):
     async def set_config_option(
         self, config_id: str, session_id: str, value: str, **kwargs: Any
     ) -> SetSessionConfigOptionResponse | None:
-        """Accept ACP config option updates even when Hermes has no typed ACP config surface yet."""
+        """Accept ACP config option updates even when Openzuma has no typed ACP config surface yet."""
         state = self.session_manager.get_session(session_id)
         if state is None:
             logger.warning("Session %s: config update requested for missing session", session_id)

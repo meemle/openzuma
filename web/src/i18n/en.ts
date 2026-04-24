@@ -45,11 +45,11 @@ export const en: Translations = {
   },
 
   app: {
-    brand: "Hermes Agent",
+    brand: "Openzuma Agent",
     brandShort: "HA",
     webUi: "Web UI",
     footer: {
-      name: "Hermes Agent",
+      name: "Openzuma Agent",
       org: "Nous Research",
     },
     nav: {
@@ -92,8 +92,8 @@ export const en: Translations = {
     starting: "Starting",
     startedInBackground: "Started in background — check logs for progress",
     stopped: "Stopped",
-    updateHermes: "Update Hermes",
-    updatingHermes: "Updating Hermes…",
+    updateOpenzuma: "Update Openzuma",
+    updatingOpenzuma: "Updating Openzuma…",
     waitingForOutput: "Waiting for output…",
   },
 
@@ -182,7 +182,7 @@ export const en: Translations = {
     searchPlaceholder: "Search skills and toolsets...",
     enabledOf: "{enabled}/{total} enabled",
     all: "All",
-    noSkills: "No skills found. Skills are loaded from ~/.hermes/skills/",
+    noSkills: "No skills found. Skills are loaded from ~/.openzuma/skills/",
     noSkillsMatch: "No skills match your search or filter.",
     skillCount: "{count} skill{s}",
     resultCount: "{count} result{s}",
@@ -196,7 +196,7 @@ export const en: Translations = {
   },
 
   config: {
-    configPath: "~/.hermes/config.yaml",
+    configPath: "~/.openzuma/config.yaml",
     exportConfig: "Export config as JSON",
     importConfig: "Import config from JSON",
     resetDefaults: "Reset to defaults",

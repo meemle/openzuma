@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 DEFAULT_WEBHOOK_HOST = "127.0.0.1"
-DEFAULT_WEBHOOK_PORT = 8645
+DEFAULT_WEBHOOK_PORT = 8745
 DEFAULT_WEBHOOK_PATH = "/bluebubbles-webhook"
 MAX_TEXT_LENGTH = 4000
 

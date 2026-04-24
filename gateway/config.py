@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from enum import Enum
 
-from hermes_cli.config import get_hermes_home
+from openzuma_cli.config import get_openzuma_home
 from utils import is_truthy_value
 
 logger = logging.getLogger(__name__)
@@ -240,7 +240,7 @@ class GatewayConfig:
     quick_commands: Dict[str, Any] = field(default_factory=dict)
     
     # Storage paths
-    sessions_dir: Path = field(default_factory=lambda: get_hermes_home() / "sessions")
+    sessions_dir: Path = field(default_factory=lambda: get_openzuma_home() / "sessions")
     
     # Delivery settings
     always_log_local: bool = True  # Always save cron outputs to local files
@@ -401,7 +401,7 @@ class GatewayConfig:
         if "default_reset_policy" in data:
             default_policy = SessionResetPolicy.from_dict(data["default_reset_policy"])
         
-        sessions_dir = get_hermes_home() / "sessions"
+        sessions_dir = get_openzuma_home() / "sessions"
         if "sessions_dir" in data:
             sessions_dir = Path(data["sessions_dir"])
         
@@ -462,11 +462,11 @@ def load_gateway_config() -> GatewayConfig:
 
     Priority (highest to lowest):
     1. Environment variables
-    2. ~/.hermes/config.yaml (primary user-facing config)
-    3. ~/.hermes/gateway.json (legacy — provides defaults under config.yaml)
+    2. ~/.openzuma/config.yaml (primary user-facing config)
+    3. ~/.openzuma/gateway.json (legacy — provides defaults under config.yaml)
     4. Built-in defaults
     """
-    _home = get_hermes_home()
+    _home = get_openzuma_home()
     gw_data: dict = {}
 
     # Legacy fallback: gateway.json provides the base layer.
@@ -823,7 +823,7 @@ def _validate_gateway_config(config: "GatewayConfig") -> None:
     # without changing placeholder values get a clear startup error instead
     # of a confusing "auth failed" from the platform API.
     try:
-        from hermes_cli.auth import has_usable_secret
+        from openzuma_cli.auth import has_usable_secret
     except ImportError:
         has_usable_secret = None  # type: ignore[assignment]
 
@@ -1167,7 +1167,7 @@ def _apply_env_overrides(config: GatewayConfig) -> None:
             "token": os.getenv("WECOM_CALLBACK_TOKEN", ""),
             "encoding_aes_key": os.getenv("WECOM_CALLBACK_ENCODING_AES_KEY", ""),
             "host": os.getenv("WECOM_CALLBACK_HOST", "0.0.0.0"),
-            "port": int(os.getenv("WECOM_CALLBACK_PORT", "8645")),
+            "port": int(os.getenv("WECOM_CALLBACK_PORT", "8745")),
         })
 
     # Weixin (personal WeChat via iLink Bot API)
@@ -1222,7 +1222,7 @@ def _apply_env_overrides(config: GatewayConfig) -> None:
             "server_url": bluebubbles_server_url.rstrip("/"),
             "password": bluebubbles_password,
             "webhook_host": os.getenv("BLUEBUBBLES_WEBHOOK_HOST", "127.0.0.1"),
-            "webhook_port": int(os.getenv("BLUEBUBBLES_WEBHOOK_PORT", "8645")),
+            "webhook_port": int(os.getenv("BLUEBUBBLES_WEBHOOK_PORT", "8745")),
             "webhook_path": os.getenv("BLUEBUBBLES_WEBHOOK_PATH", "/bluebubbles-webhook"),
             "send_read_receipts": os.getenv("BLUEBUBBLES_SEND_READ_RECEIPTS", "true").lower() in ("true", "1", "yes"),
         })

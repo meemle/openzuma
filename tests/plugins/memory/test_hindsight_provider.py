@@ -98,11 +98,11 @@ def provider(tmp_path, monkeypatch):
     config_path.write_text(json.dumps(config))
 
     monkeypatch.setattr(
-        "plugins.memory.hindsight.get_hermes_home", lambda: tmp_path
+        "plugins.memory.hindsight.get_openzuma_home", lambda: tmp_path
     )
 
     p = HindsightMemoryProvider()
-    p.initialize(session_id="test-session", hermes_home=str(tmp_path), platform="cli")
+    p.initialize(session_id="test-session", openzuma_home=str(tmp_path), platform="cli")
     p._client = _make_mock_client()
     return p
 
@@ -125,26 +125,26 @@ def provider_with_config(tmp_path, monkeypatch):
         config_path.write_text(json.dumps(config))
 
         monkeypatch.setattr(
-            "plugins.memory.hindsight.get_hermes_home", lambda: tmp_path
+            "plugins.memory.hindsight.get_openzuma_home", lambda: tmp_path
         )
 
         p = HindsightMemoryProvider()
-        p.initialize(session_id="test-session", hermes_home=str(tmp_path), platform="cli")
+        p.initialize(session_id="test-session", openzuma_home=str(tmp_path), platform="cli")
         p._client = _make_mock_client()
         return p
     return _make
 
 
 def test_normalize_retain_tags_accepts_csv_and_dedupes():
-    assert _normalize_retain_tags("agent:fakeassistantname, source_system:hermes-agent, agent:fakeassistantname") == [
+    assert _normalize_retain_tags("agent:fakeassistantname, source_system:openzuma-agent, agent:fakeassistantname") == [
         "agent:fakeassistantname",
-        "source_system:hermes-agent",
+        "source_system:openzuma-agent",
     ]
 
 
 def test_normalize_retain_tags_accepts_json_array_string():
-    value = json.dumps(["agent:fakeassistantname", "source_system:hermes-agent"])
-    assert _normalize_retain_tags(value) == ["agent:fakeassistantname", "source_system:hermes-agent"]
+    value = json.dumps(["agent:fakeassistantname", "source_system:openzuma-agent"])
+    assert _normalize_retain_tags(value) == ["agent:fakeassistantname", "source_system:openzuma-agent"]
 
 
 # ---------------------------------------------------------------------------
@@ -195,12 +195,12 @@ class TestConfig:
         assert provider._recall_tags is None
         assert provider._bank_mission == ""
         assert provider._bank_retain_mission is None
-        assert provider._retain_context == "conversation between Hermes Agent and the User"
+        assert provider._retain_context == "conversation between Openzuma Agent and the User"
 
     def test_custom_config_values(self, provider_with_config):
         p = provider_with_config(
             retain_tags=["tag1", "tag2"],
-            retain_source="hermes",
+            retain_source="openzuma",
             retain_user_prefix="User (fakeusername)",
             retain_assistant_prefix="Assistant (fakeassistantname)",
             recall_tags=["recall-tag"],
@@ -218,7 +218,7 @@ class TestConfig:
         )
         assert p._tags == ["tag1", "tag2"]
         assert p._retain_tags == ["tag1", "tag2"]
-        assert p._retain_source == "hermes"
+        assert p._retain_source == "openzuma"
         assert p._retain_user_prefix == "User (fakeusername)"
         assert p._retain_assistant_prefix == "Assistant (fakeassistantname)"
         assert p._recall_tags == ["recall-tag"]
@@ -237,7 +237,7 @@ class TestConfig:
     def test_config_from_env_fallback(self, tmp_path, monkeypatch):
         """When no config file exists, falls back to env vars."""
         monkeypatch.setattr(
-            "plugins.memory.hindsight.get_hermes_home",
+            "plugins.memory.hindsight.get_openzuma_home",
             lambda: tmp_path / "nonexistent",
         )
         monkeypatch.setenv("HINDSIGHT_MODE", "cloud")
@@ -247,8 +247,8 @@ class TestConfig:
 
         cfg = _load_config()
         assert cfg["apiKey"] == "env-key"
-        assert cfg["banks"]["hermes"]["bankId"] == "env-bank"
-        assert cfg["banks"]["hermes"]["budget"] == "high"
+        assert cfg["banks"]["openzuma"]["bankId"] == "env-bank"
+        assert cfg["banks"]["openzuma"]["budget"] == "high"
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +447,7 @@ class TestSyncTurn:
     def test_sync_turn_retains_metadata_rich_turn(self, provider_with_config):
         p = provider_with_config(
             retain_tags=["conv", "session1"],
-            retain_source="hermes",
+            retain_source="openzuma",
             retain_user_prefix="User (fakeusername)",
             retain_assistant_prefix="Assistant (fakeassistantname)",
         )
@@ -474,7 +474,7 @@ class TestSyncTurn:
         assert call_kwargs["retain_async"] is True
         assert len(call_kwargs["items"]) == 1
         item = call_kwargs["items"][0]
-        assert item["context"] == "conversation between Hermes Agent and the User"
+        assert item["context"] == "conversation between Openzuma Agent and the User"
         assert item["tags"] == ["conv", "session1"]
         content = json.loads(item["content"])
         assert len(content) == 1
@@ -482,7 +482,7 @@ class TestSyncTurn:
         assert content[0][0]["content"] == "User (fakeusername): hello"
         assert content[0][1]["role"] == "assistant"
         assert content[0][1]["content"] == "Assistant (fakeassistantname): hi there"
-        assert item["metadata"]["source"] == "hermes"
+        assert item["metadata"]["source"] == "openzuma"
         assert item["metadata"]["session_id"] == "session-1"
         assert item["metadata"]["platform"] == "discord"
         assert item["metadata"]["user_id"] == "fakeusername-123"
@@ -589,7 +589,7 @@ class TestConfigSchema:
 class TestAvailability:
     def test_available_with_api_key(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "plugins.memory.hindsight.get_hermes_home",
+            "plugins.memory.hindsight.get_openzuma_home",
             lambda: tmp_path / "nonexistent",
         )
         monkeypatch.setenv("HINDSIGHT_API_KEY", "test-key")
@@ -598,7 +598,7 @@ class TestAvailability:
 
     def test_not_available_without_config(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "plugins.memory.hindsight.get_hermes_home",
+            "plugins.memory.hindsight.get_openzuma_home",
             lambda: tmp_path / "nonexistent",
         )
         p = HindsightMemoryProvider()
@@ -606,7 +606,7 @@ class TestAvailability:
 
     def test_available_in_local_mode(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "plugins.memory.hindsight.get_hermes_home",
+            "plugins.memory.hindsight.get_openzuma_home",
             lambda: tmp_path / "nonexistent",
         )
         monkeypatch.setenv("HINDSIGHT_MODE", "local")

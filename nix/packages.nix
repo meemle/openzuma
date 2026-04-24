@@ -1,19 +1,19 @@
-# nix/packages.nix — Hermes Agent package built with uv2nix
+# nix/packages.nix — Openzuma Agent package built with uv2nix
 { inputs, ... }:
 {
   perSystem =
     { pkgs, inputs', ... }:
     let
-      hermesVenv = pkgs.callPackage ./python.nix {
+      openzumaVenv = pkgs.callPackage ./python.nix {
         inherit (inputs) uv2nix pyproject-nix pyproject-build-systems;
       };
 
-      hermesNpmLib = pkgs.callPackage ./lib.nix {
+      openzumaNpmLib = pkgs.callPackage ./lib.nix {
         npm-lockfile-fix = inputs'.npm-lockfile-fix.packages.default;
       };
 
-      hermesTui = pkgs.callPackage ./tui.nix {
-        inherit hermesNpmLib;
+      openzumaTui = pkgs.callPackage ./tui.nix {
+        inherit openzumaNpmLib;
       };
 
       # Import bundled skills, excluding runtime caches
@@ -22,8 +22,8 @@
         filter = path: _type: !(pkgs.lib.hasInfix "/index-cache/" path);
       };
 
-      hermesWeb = pkgs.callPackage ./web.nix {
-        inherit hermesNpmLib;
+      openzumaWeb = pkgs.callPackage ./web.nix {
+        inherit openzumaNpmLib;
       };
 
       runtimeDeps = with pkgs; [
@@ -48,7 +48,7 @@
     {
       packages = {
         default = pkgs.stdenv.mkDerivation {
-          pname = "hermes-agent";
+          pname = "openzuma-agent";
           version = (fromTOML (builtins.readFile ../pyproject.toml)).project.version;
 
           dontUnpack = true;
@@ -58,28 +58,28 @@
           installPhase = ''
             runHook preInstall
 
-            mkdir -p $out/share/hermes-agent $out/bin
-            cp -r ${bundledSkills} $out/share/hermes-agent/skills
-            cp -r ${hermesWeb} $out/share/hermes-agent/web_dist
+            mkdir -p $out/share/openzuma-agent $out/bin
+            cp -r ${bundledSkills} $out/share/openzuma-agent/skills
+            cp -r ${openzumaWeb} $out/share/openzuma-agent/web_dist
 
             # copy pre-built TUI (same layout as dev: ui-tui/dist/ + node_modules/)
             mkdir -p $out/ui-tui
-            cp -r ${hermesTui}/lib/hermes-tui/* $out/ui-tui/
+            cp -r ${openzumaTui}/lib/openzuma-tui/* $out/ui-tui/
 
             ${pkgs.lib.concatMapStringsSep "\n"
               (name: ''
-                makeWrapper ${hermesVenv}/bin/${name} $out/bin/${name} \
+                makeWrapper ${openzumaVenv}/bin/${name} $out/bin/${name} \
                   --suffix PATH : "${runtimePath}" \
-                  --set HERMES_BUNDLED_SKILLS $out/share/hermes-agent/skills \
-                  --set HERMES_WEB_DIST $out/share/hermes-agent/web_dist \
-                  --set HERMES_TUI_DIR $out/ui-tui \
-                  --set HERMES_PYTHON ${hermesVenv}/bin/python3 \
-                  --set HERMES_NODE ${pkgs.nodejs_22}/bin/node
+                  --set OPENZUMA_BUNDLED_SKILLS $out/share/openzuma-agent/skills \
+                  --set OPENZUMA_WEB_DIST $out/share/openzuma-agent/web_dist \
+                  --set OPENZUMA_TUI_DIR $out/ui-tui \
+                  --set OPENZUMA_PYTHON ${openzumaVenv}/bin/python3 \
+                  --set OPENZUMA_NODE ${pkgs.nodejs_22}/bin/node
               '')
               [
-                "hermes"
-                "hermes-agent"
-                "hermes-acp"
+                "openzuma"
+                "openzuma-agent"
+                "openzuma-acp"
               ]
             }
 
@@ -87,10 +87,10 @@
           '';
 
           passthru.devShellHook = ''
-            STAMP=".nix-stamps/hermes-agent"
+            STAMP=".nix-stamps/openzuma-agent"
             STAMP_VALUE="${pyprojectHash}:${uvLockHash}"
             if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$STAMP_VALUE" ]; then
-              echo "hermes-agent: installing Python dependencies..."
+              echo "openzuma-agent: installing Python dependencies..."
               uv venv .venv --python ${pkgs.python312}/bin/python3 2>/dev/null || true
               source .venv/bin/activate
               uv pip install -e ".[all]"
@@ -100,24 +100,24 @@
               echo "$STAMP_VALUE" > "$STAMP"
             else
               source .venv/bin/activate
-              export HERMES_PYTHON=${hermesVenv}/bin/python3
+              export OPENZUMA_PYTHON=${openzumaVenv}/bin/python3
             fi
           '';
 
           meta = with pkgs.lib; {
             description = "AI agent with advanced tool-calling capabilities";
-            homepage = "https://github.com/NousResearch/hermes-agent";
-            mainProgram = "hermes";
+            homepage = "https://github.com/NousResearch/openzuma-agent";
+            mainProgram = "openzuma";
             license = licenses.mit;
             platforms = platforms.unix;
           };
         };
 
-        tui = hermesTui;
-        web = hermesWeb;
+        tui = openzumaTui;
+        web = openzumaWeb;
 
-        fix-lockfiles = hermesNpmLib.mkFixLockfiles {
-          packages = [ hermesTui hermesWeb ];
+        fix-lockfiles = openzumaNpmLib.mkFixLockfiles {
+          packages = [ openzumaTui openzumaWeb ];
         };
       };
     };

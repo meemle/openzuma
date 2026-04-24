@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@hermes/ink": ["src/types/hermes-ink.d.ts"]
+      "@openzuma/ink": ["src/types/openzuma-ink.d.ts"]
     }
   }
 }

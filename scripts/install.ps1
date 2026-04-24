@@ -1,11 +1,11 @@
 # ============================================================================
-# Hermes Agent Installer for Windows
+# Openzuma Agent Installer for Windows
 # ============================================================================
 # Installation script for Windows (PowerShell).
 # Uses uv for fast Python provisioning and package management.
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/NousResearch/openzuma-agent/main/scripts/install.ps1 | iex
 #
 # Or download and run with options:
 #   .\install.ps1 -NoVenv -SkipSetup
@@ -16,8 +16,8 @@ param(
     [switch]$NoVenv,
     [switch]$SkipSetup,
     [string]$Branch = "main",
-    [string]$HermesHome = "$env:LOCALAPPDATA\hermes",
-    [string]$InstallDir = "$env:LOCALAPPDATA\hermes\hermes-agent"
+    [string]$OpenzumaHome = "$env:LOCALAPPDATA\openzuma",
+    [string]$InstallDir = "$env:LOCALAPPDATA\openzuma\openzuma-agent"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,8 +26,8 @@ $ErrorActionPreference = "Stop"
 # Configuration
 # ============================================================================
 
-$RepoUrlSsh = "git@github.com:NousResearch/hermes-agent.git"
-$RepoUrlHttps = "https://github.com/NousResearch/hermes-agent.git"
+$RepoUrlSsh = "git@github.com:NousResearch/openzuma-agent.git"
+$RepoUrlHttps = "https://github.com/NousResearch/openzuma-agent.git"
 $PythonVersion = "3.11"
 $NodeVersion = "22"
 
@@ -38,7 +38,7 @@ $NodeVersion = "22"
 function Write-Banner {
     Write-Host ""
     Write-Host "┌─────────────────────────────────────────────────────────┐" -ForegroundColor Magenta
-    Write-Host "│             ⚕ Hermes Agent Installer                    │" -ForegroundColor Magenta
+    Write-Host "│             ⚕ Openzuma Agent Installer                    │" -ForegroundColor Magenta
     Write-Host "├─────────────────────────────────────────────────────────┤" -ForegroundColor Magenta
     Write-Host "│  An open source AI agent by Nous Research.              │" -ForegroundColor Magenta
     Write-Host "└─────────────────────────────────────────────────────────┘" -ForegroundColor Magenta
@@ -217,11 +217,11 @@ function Test-Node {
     }
 
     # Check our own managed install from a previous run
-    $managedNode = "$HermesHome\node\node.exe"
+    $managedNode = "$OpenzumaHome\node\node.exe"
     if (Test-Path $managedNode) {
         $version = & $managedNode --version
-        $env:Path = "$HermesHome\node;$env:Path"
-        Write-Success "Node.js $version found (Hermes-managed)"
+        $env:Path = "$OpenzumaHome\node;$env:Path"
+        Write-Success "Node.js $version found (Openzuma-managed)"
         $script:HasNode = $true
         return $true
     }
@@ -244,7 +244,7 @@ function Test-Node {
         } catch { }
     }
 
-    # Fallback: download binary zip to ~/.hermes/node/
+    # Fallback: download binary zip to ~/.openzuma/node/
     Write-Info "Downloading Node.js $NodeVersion binary..."
     try {
         $arch = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
@@ -255,7 +255,7 @@ function Test-Node {
         if ($zipName) {
             $downloadUrl = "${indexUrl}${zipName}"
             $tmpZip = "$env:TEMP\$zipName"
-            $tmpDir = "$env:TEMP\hermes-node-extract"
+            $tmpDir = "$env:TEMP\openzuma-node-extract"
 
             Invoke-WebRequest -Uri $downloadUrl -OutFile $tmpZip -UseBasicParsing
             if (Test-Path $tmpDir) { Remove-Item -Recurse -Force $tmpDir }
@@ -263,12 +263,12 @@ function Test-Node {
 
             $extractedDir = Get-ChildItem $tmpDir -Directory | Select-Object -First 1
             if ($extractedDir) {
-                if (Test-Path "$HermesHome\node") { Remove-Item -Recurse -Force "$HermesHome\node" }
-                Move-Item $extractedDir.FullName "$HermesHome\node"
-                $env:Path = "$HermesHome\node;$env:Path"
+                if (Test-Path "$OpenzumaHome\node") { Remove-Item -Recurse -Force "$OpenzumaHome\node" }
+                Move-Item $extractedDir.FullName "$OpenzumaHome\node"
+                $env:Path = "$OpenzumaHome\node;$env:Path"
 
-                $version = & "$HermesHome\node\node.exe" --version
-                Write-Success "Node.js $version installed to ~/.hermes/node/"
+                $version = & "$OpenzumaHome\node\node.exe" --version
+                Write-Success "Node.js $version installed to ~/.openzuma/node/"
                 $script:HasNode = $true
 
                 Remove-Item -Force $tmpZip -ErrorAction SilentlyContinue
@@ -461,9 +461,9 @@ function Install-Repository {
             if (Test-Path $InstallDir) { Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue }
             Write-Warn "Git clone failed — downloading ZIP archive instead..."
             try {
-                $zipUrl = "https://github.com/NousResearch/hermes-agent/archive/refs/heads/$Branch.zip"
-                $zipPath = "$env:TEMP\hermes-agent-$Branch.zip"
-                $extractPath = "$env:TEMP\hermes-agent-extract"
+                $zipUrl = "https://github.com/NousResearch/openzuma-agent/archive/refs/heads/$Branch.zip"
+                $zipPath = "$env:TEMP\openzuma-agent-$Branch.zip"
+                $extractPath = "$env:TEMP\openzuma-agent-extract"
                 
                 Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
                 if (Test-Path $extractPath) { Remove-Item -Recurse -Force $extractPath }
@@ -578,97 +578,97 @@ function Install-Dependencies {
 }
 
 function Set-PathVariable {
-    Write-Info "Setting up hermes command..."
+    Write-Info "Setting up openzuma command..."
     
     if ($NoVenv) {
-        $hermesBin = "$InstallDir"
+        $openzumaBin = "$InstallDir"
     } else {
-        $hermesBin = "$InstallDir\venv\Scripts"
+        $openzumaBin = "$InstallDir\venv\Scripts"
     }
     
-    # Add the venv Scripts dir to user PATH so hermes is globally available
-    # On Windows, the hermes.exe in venv\Scripts\ has the venv Python baked in
+    # Add the venv Scripts dir to user PATH so openzuma is globally available
+    # On Windows, the openzuma.exe in venv\Scripts\ has the venv Python baked in
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
     
-    if ($currentPath -notlike "*$hermesBin*") {
+    if ($currentPath -notlike "*$openzumaBin*") {
         [Environment]::SetEnvironmentVariable(
             "Path",
-            "$hermesBin;$currentPath",
+            "$openzumaBin;$currentPath",
             "User"
         )
-        Write-Success "Added to user PATH: $hermesBin"
+        Write-Success "Added to user PATH: $openzumaBin"
     } else {
         Write-Info "PATH already configured"
     }
     
-    # Set HERMES_HOME so the Python code finds config/data in the right place.
-    # Only needed on Windows where we install to %LOCALAPPDATA%\hermes instead
-    # of the Unix default ~/.hermes
-    $currentHermesHome = [Environment]::GetEnvironmentVariable("HERMES_HOME", "User")
-    if (-not $currentHermesHome -or $currentHermesHome -ne $HermesHome) {
-        [Environment]::SetEnvironmentVariable("HERMES_HOME", $HermesHome, "User")
-        Write-Success "Set HERMES_HOME=$HermesHome"
+    # Set OPENZUMA_HOME so the Python code finds config/data in the right place.
+    # Only needed on Windows where we install to %LOCALAPPDATA%\openzuma instead
+    # of the Unix default ~/.openzuma
+    $currentOpenzumaHome = [Environment]::GetEnvironmentVariable("OPENZUMA_HOME", "User")
+    if (-not $currentOpenzumaHome -or $currentOpenzumaHome -ne $OpenzumaHome) {
+        [Environment]::SetEnvironmentVariable("OPENZUMA_HOME", $OpenzumaHome, "User")
+        Write-Success "Set OPENZUMA_HOME=$OpenzumaHome"
     }
-    $env:HERMES_HOME = $HermesHome
+    $env:OPENZUMA_HOME = $OpenzumaHome
     
     # Update current session
-    $env:Path = "$hermesBin;$env:Path"
+    $env:Path = "$openzumaBin;$env:Path"
     
-    Write-Success "hermes command ready"
+    Write-Success "openzuma command ready"
 }
 
 function Copy-ConfigTemplates {
     Write-Info "Setting up configuration files..."
     
-    # Create ~/.hermes directory structure
-    New-Item -ItemType Directory -Force -Path "$HermesHome\cron" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\sessions" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\logs" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\pairing" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\hooks" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\image_cache" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\audio_cache" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\memories" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\skills" | Out-Null
+    # Create ~/.openzuma directory structure
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\cron" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\sessions" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\logs" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\pairing" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\hooks" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\image_cache" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\audio_cache" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\memories" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$OpenzumaHome\skills" | Out-Null
 
     
     # Create .env
-    $envPath = "$HermesHome\.env"
+    $envPath = "$OpenzumaHome\.env"
     if (-not (Test-Path $envPath)) {
         $examplePath = "$InstallDir\.env.example"
         if (Test-Path $examplePath) {
             Copy-Item $examplePath $envPath
-            Write-Success "Created ~/.hermes/.env from template"
+            Write-Success "Created ~/.openzuma/.env from template"
         } else {
             New-Item -ItemType File -Force -Path $envPath | Out-Null
-            Write-Success "Created ~/.hermes/.env"
+            Write-Success "Created ~/.openzuma/.env"
         }
     } else {
-        Write-Info "~/.hermes/.env already exists, keeping it"
+        Write-Info "~/.openzuma/.env already exists, keeping it"
     }
     
     # Create config.yaml
-    $configPath = "$HermesHome\config.yaml"
+    $configPath = "$OpenzumaHome\config.yaml"
     if (-not (Test-Path $configPath)) {
         $examplePath = "$InstallDir\cli-config.yaml.example"
         if (Test-Path $examplePath) {
             Copy-Item $examplePath $configPath
-            Write-Success "Created ~/.hermes/config.yaml from template"
+            Write-Success "Created ~/.openzuma/config.yaml from template"
         }
     } else {
-        Write-Info "~/.hermes/config.yaml already exists, keeping it"
+        Write-Info "~/.openzuma/config.yaml already exists, keeping it"
     }
     
     # Create SOUL.md if it doesn't exist (global persona file)
-    $soulPath = "$HermesHome\SOUL.md"
+    $soulPath = "$OpenzumaHome\SOUL.md"
     if (-not (Test-Path $soulPath)) {
         @"
-# Hermes Agent Persona
+# Openzuma Agent Persona
 
 <!-- 
 This file defines the agent's personality and tone.
 The agent will embody whatever you write here.
-Edit this to customize how Hermes communicates with you.
+Edit this to customize how Openzuma communicates with you.
 
 Examples:
   - "You are a warm, playful assistant who uses kaomoji occasionally."
@@ -679,25 +679,25 @@ This file is loaded fresh each message -- no restart needed.
 Delete the contents (or this file) to use the default personality.
 -->
 "@ | Set-Content -Path $soulPath -Encoding UTF8
-        Write-Success "Created ~/.hermes/SOUL.md (edit to customize personality)"
+        Write-Success "Created ~/.openzuma/SOUL.md (edit to customize personality)"
     }
     
-    Write-Success "Configuration directory ready: ~/.hermes/"
+    Write-Success "Configuration directory ready: ~/.openzuma/"
     
-    # Seed bundled skills into ~/.hermes/skills/ (manifest-based, one-time per skill)
-    Write-Info "Syncing bundled skills to ~/.hermes/skills/ ..."
+    # Seed bundled skills into ~/.openzuma/skills/ (manifest-based, one-time per skill)
+    Write-Info "Syncing bundled skills to ~/.openzuma/skills/ ..."
     $pythonExe = "$InstallDir\venv\Scripts\python.exe"
     if (Test-Path $pythonExe) {
         try {
             & $pythonExe "$InstallDir\tools\skills_sync.py" 2>$null
-            Write-Success "Skills synced to ~/.hermes/skills/"
+            Write-Success "Skills synced to ~/.openzuma/skills/"
         } catch {
             # Fallback: simple directory copy
             $bundledSkills = "$InstallDir\skills"
-            $userSkills = "$HermesHome\skills"
+            $userSkills = "$OpenzumaHome\skills"
             if ((Test-Path $bundledSkills) -and -not (Get-ChildItem $userSkills -Exclude '.bundled_manifest' -ErrorAction SilentlyContinue)) {
                 Copy-Item -Path "$bundledSkills\*" -Destination $userSkills -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Skills copied to ~/.hermes/skills/"
+                Write-Success "Skills copied to ~/.openzuma/skills/"
             }
         }
     }
@@ -730,7 +730,7 @@ function Install-NodeDeps {
             npm install --silent 2>&1 | Out-Null
             Write-Success "TUI dependencies installed"
         } catch {
-            Write-Warn "TUI npm install failed (hermes --tui may not work)"
+            Write-Warn "TUI npm install failed (openzuma --tui may not work)"
         }
         Pop-Location
     }
@@ -752,18 +752,18 @@ function Invoke-SetupWizard {
     
     Push-Location $InstallDir
     
-    # Run hermes setup using the venv Python directly (no activation needed)
+    # Run openzuma setup using the venv Python directly (no activation needed)
     if (-not $NoVenv) {
-        & ".\venv\Scripts\python.exe" -m hermes_cli.main setup
+        & ".\venv\Scripts\python.exe" -m openzuma_cli.main setup
     } else {
-        python -m hermes_cli.main setup
+        python -m openzuma_cli.main setup
     }
     
     Pop-Location
 }
 
 function Start-GatewayIfConfigured {
-    $envPath = "$HermesHome\.env"
+    $envPath = "$OpenzumaHome\.env"
     if (-not (Test-Path $envPath)) { return }
 
     $hasMessaging = $false
@@ -775,23 +775,23 @@ function Start-GatewayIfConfigured {
 
     if (-not $hasMessaging) { return }
 
-    $hermesCmd = "$InstallDir\venv\Scripts\hermes.exe"
-    if (-not (Test-Path $hermesCmd)) {
-        $hermesCmd = "hermes"
+    $openzumaCmd = "$InstallDir\venv\Scripts\openzuma.exe"
+    if (-not (Test-Path $openzumaCmd)) {
+        $openzumaCmd = "openzuma"
     }
 
     # If WhatsApp is enabled but not yet paired, run foreground for QR scan
     $whatsappEnabled = $content | Where-Object { $_ -match "^WHATSAPP_ENABLED=true" }
-    $whatsappSession = "$HermesHome\whatsapp\session\creds.json"
+    $whatsappSession = "$OpenzumaHome\whatsapp\session\creds.json"
     if ($whatsappEnabled -and -not (Test-Path $whatsappSession)) {
         Write-Host ""
         Write-Info "WhatsApp is enabled but not yet paired."
-        Write-Info "Running 'hermes whatsapp' to pair via QR code..."
+        Write-Info "Running 'openzuma whatsapp' to pair via QR code..."
         Write-Host ""
         $response = Read-Host "Pair WhatsApp now? [Y/n]"
         if ($response -eq "" -or $response -match "^[Yy]") {
             try {
-                & $hermesCmd whatsapp
+                & $openzumaCmd whatsapp
             } catch {
                 # Expected after pairing completes
             }
@@ -807,19 +807,19 @@ function Start-GatewayIfConfigured {
     if ($response -eq "" -or $response -match "^[Yy]") {
         Write-Info "Starting gateway in background..."
         try {
-            $logFile = "$HermesHome\logs\gateway.log"
-            Start-Process -FilePath $hermesCmd -ArgumentList "gateway" `
+            $logFile = "$OpenzumaHome\logs\gateway.log"
+            Start-Process -FilePath $openzumaCmd -ArgumentList "gateway" `
                 -RedirectStandardOutput $logFile `
-                -RedirectStandardError "$HermesHome\logs\gateway-error.log" `
+                -RedirectStandardError "$OpenzumaHome\logs\gateway-error.log" `
                 -WindowStyle Hidden
             Write-Success "Gateway started! Your bot is now online."
             Write-Info "Logs: $logFile"
             Write-Info "To stop: close the gateway process from Task Manager"
         } catch {
-            Write-Warn "Failed to start gateway. Run manually: hermes gateway"
+            Write-Warn "Failed to start gateway. Run manually: openzuma gateway"
         }
     } else {
-        Write-Info "Skipped. Start the gateway later with: hermes gateway"
+        Write-Info "Skipped. Start the gateway later with: openzuma gateway"
     }
 }
 
@@ -834,30 +834,30 @@ function Write-Completion {
     Write-Host "📁 Your files:" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "   Config:    " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\config.yaml"
+    Write-Host "$OpenzumaHome\config.yaml"
     Write-Host "   API Keys:  " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\.env"
+    Write-Host "$OpenzumaHome\.env"
     Write-Host "   Data:      " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\cron\, sessions\, logs\"
+    Write-Host "$OpenzumaHome\cron\, sessions\, logs\"
     Write-Host "   Code:      " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\hermes-agent\"
+    Write-Host "$OpenzumaHome\openzuma-agent\"
     Write-Host ""
     
     Write-Host "─────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "🚀 Commands:" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "   hermes              " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma              " -NoNewline -ForegroundColor Green
     Write-Host "Start chatting"
-    Write-Host "   hermes setup        " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma setup        " -NoNewline -ForegroundColor Green
     Write-Host "Configure API keys & settings"
-    Write-Host "   hermes config       " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma config       " -NoNewline -ForegroundColor Green
     Write-Host "View/edit configuration"
-    Write-Host "   hermes config edit  " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma config edit  " -NoNewline -ForegroundColor Green
     Write-Host "Open config in editor"
-    Write-Host "   hermes gateway      " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma gateway      " -NoNewline -ForegroundColor Green
     Write-Host "Start messaging gateway (Telegram, Discord, etc.)"
-    Write-Host "   hermes update       " -NoNewline -ForegroundColor Green
+    Write-Host "   openzuma update       " -NoNewline -ForegroundColor Green
     Write-Host "Update to latest version"
     Write-Host ""
     
@@ -915,7 +915,7 @@ try {
     Write-Err "Installation failed: $_"
     Write-Host ""
     Write-Info "If the error is unclear, try downloading and running the script directly:"
-    Write-Host "  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1' -OutFile install.ps1" -ForegroundColor Yellow
+    Write-Host "  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/NousResearch/openzuma-agent/main/scripts/install.ps1' -OutFile install.ps1" -ForegroundColor Yellow
     Write-Host "  .\install.ps1" -ForegroundColor Yellow
     Write-Host ""
 }

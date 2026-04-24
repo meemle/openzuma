@@ -9,24 +9,24 @@ import pytest
 
 @pytest.fixture
 def _isolate(tmp_path, monkeypatch):
-    """Isolate HERMES_HOME so tests don't touch real config."""
-    home = tmp_path / ".hermes"
+    """Isolate OPENZUMA_HOME so tests don't touch real config."""
+    home = tmp_path / ".openzuma"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("OPENZUMA_HOME", str(home))
 
 
 @pytest.fixture
 def cli_obj(_isolate):
-    """Create a minimal HermesCLI instance for banner testing."""
+    """Create a minimal OpenzumaCLI instance for banner testing."""
     with patch("cli.load_cli_config", return_value={
         "display": {"tool_progress": "new"},
         "terminal": {},
     }), patch("cli.get_tool_definitions", return_value=[]), \
          patch("cli.build_welcome_banner"):
-        from cli import HermesCLI
-        obj = HermesCLI.__new__(HermesCLI)
+        from cli import OpenzumaCLI
+        obj = OpenzumaCLI.__new__(OpenzumaCLI)
         obj.model = "test-model"
-        obj.enabled_toolsets = ["hermes-core"]
+        obj.enabled_toolsets = ["openzuma-core"]
         obj.compact = False
         obj.console = MagicMock()
         obj.session_id = None

@@ -13,7 +13,7 @@ Add a first-class `gemini` provider that authenticates via Google OAuth, using t
 - **Type:** Authorization Code + PKCE (S256) — same pattern as clawdbot/pi-mono
 - **Auth URL:** `https://accounts.google.com/o/oauth2/v2/auth`
 - **Token URL:** `https://oauth2.googleapis.com/token`
-- **Redirect:** `http://localhost:8085/oauth2callback` (localhost callback server)
+- **Redirect:** `http://localhost:8185/oauth2callback` (localhost callback server)
 - **Fallback:** Manual URL paste for remote/WSL/headless environments
 - **Scopes:** `https://www.googleapis.com/auth/cloud-platform`, `https://www.googleapis.com/auth/userinfo.email`
 - **PKCE:** S256 code challenge, 32-byte random verifier
@@ -24,7 +24,7 @@ Add a first-class `gemini` provider that authenticates via Google OAuth, using t
 - Alternatively: accept user-provided client_id via env vars as override
 
 ## Token Lifecycle
-- Store at `~/.hermes/gemini_oauth.json` (NOT sharing with `~/.gemini/oauth_creds.json`)
+- Store at `~/.openzuma/gemini_oauth.json` (NOT sharing with `~/.gemini/oauth_creds.json`)
 - Fields: `client_id`, `client_secret`, `refresh_token`, `access_token`, `expires_at`, `email`
 - File permissions: 0o600
 - Before each API call: check expiry, refresh if within 5 min of expiration
@@ -49,11 +49,11 @@ Add a first-class `gemini` provider that authenticates via Google OAuth, using t
    - ~200 lines
 
 ### Existing files to modify
-2. `hermes_cli/auth.py` — Add ProviderConfig for "gemini" with auth_type="oauth_google"
-3. `hermes_cli/models.py` — Add Gemini model catalog
-4. `hermes_cli/runtime_provider.py` — Add gemini branch (read OAuth token, build OpenAI client)
-5. `hermes_cli/main.py` — Add `_model_flow_gemini()`, add to provider choices
-6. `hermes_cli/setup.py` — Add gemini auth flow (trigger browser OAuth)
+2. `openzuma_cli/auth.py` — Add ProviderConfig for "gemini" with auth_type="oauth_google"
+3. `openzuma_cli/models.py` — Add Gemini model catalog
+4. `openzuma_cli/runtime_provider.py` — Add gemini branch (read OAuth token, build OpenAI client)
+5. `openzuma_cli/main.py` — Add `_model_flow_gemini()`, add to provider choices
+6. `openzuma_cli/setup.py` — Add gemini auth flow (trigger browser OAuth)
 7. `run_agent.py` — Token refresh before API calls (like Copilot pattern)
 8. `agent/auxiliary_client.py` — Add gemini to aux resolution chain
 9. `agent/model_metadata.py` — Add Gemini model context lengths
@@ -72,9 +72,9 @@ Add a first-class `gemini` provider that authenticates via Google OAuth, using t
 
 ## Prerequisites
 - Nous Research GCP project with Desktop OAuth client registered
-- OR: accept user-provided client_id via HERMES_GEMINI_CLIENT_ID env var
+- OR: accept user-provided client_id via OPENZUMA_GEMINI_CLIENT_ID env var
 
 ## Reference implementations
 - clawdbot: `extensions/google/oauth.flow.ts` (PKCE + localhost server)
 - pi-mono: `packages/ai/src/utils/oauth/google-gemini-cli.ts` (same flow)
-- hermes-agent Copilot OAuth: `hermes_cli/main.py` `_copilot_device_flow()` (different flow type but same lifecycle pattern)
+- openzuma-agent Copilot OAuth: `openzuma_cli/main.py` `_copilot_device_flow()` (different flow type but same lifecycle pattern)

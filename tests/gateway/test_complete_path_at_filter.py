@@ -4,7 +4,7 @@ Reported during the TUI v2 blitz retest: typing `@folder:` (and `@folder`
 with no colon yet) still surfaced files alongside directories in the
 TUI composer, because the gateway-side completion lives in
 `tui_gateway/server.py` and was never touched by the earlier fix to
-`hermes_cli/commands.py`.
+`openzuma_cli/commands.py`.
 
 Covers:
   - `@folder:` only yields directories

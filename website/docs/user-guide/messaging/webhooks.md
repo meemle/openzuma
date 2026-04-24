@@ -1,12 +1,12 @@
 ---
 sidebar_position: 13
 title: "Webhooks"
-description: "Receive events from GitHub, GitLab, and other services to trigger Hermes agent runs"
+description: "Receive events from GitHub, GitLab, and other services to trigger Openzuma agent runs"
 ---
 
 # Webhooks
 
-Receive events from external services (GitHub, GitLab, JIRA, Stripe, etc.) and trigger Hermes agent runs automatically. The webhook adapter runs an HTTP server that accepts POST requests, validates HMAC signatures, transforms payloads into agent prompts, and routes responses back to the source or to another configured platform.
+Receive events from external services (GitHub, GitLab, JIRA, Stripe, etc.) and trigger Openzuma agent runs automatically. The webhook adapter runs an HTTP server that accepts POST requests, validates HMAC signatures, transforms payloads into agent prompts, and routes responses back to the source or to another configured platform.
 
 The agent processes the event and can respond by posting comments on PRs, sending messages to Telegram/Discord, or logging the result.
 
@@ -14,9 +14,9 @@ The agent processes the event and can respond by posting comments on PRs, sendin
 
 ## Quick Start
 
-1. Enable via `hermes gateway setup` or environment variables
-2. Define routes in `config.yaml` **or** create them dynamically with `hermes webhook subscribe`
-3. Point your service at `http://your-server:8644/webhooks/<route-name>`
+1. Enable via `openzuma gateway setup` or environment variables
+2. Define routes in `config.yaml` **or** create them dynamically with `openzuma webhook subscribe`
+3. Point your service at `http://your-server:8744/webhooks/<route-name>`
 
 ---
 
@@ -27,18 +27,18 @@ There are two ways to enable the webhook adapter.
 ### Via setup wizard
 
 ```bash
-hermes gateway setup
+openzuma gateway setup
 ```
 
 Follow the prompts to enable webhooks, set the port, and set a global HMAC secret.
 
 ### Via environment variables
 
-Add to `~/.hermes/.env`:
+Add to `~/.openzuma/.env`:
 
 ```bash
 WEBHOOK_ENABLED=true
-WEBHOOK_PORT=8644        # default
+WEBHOOK_PORT=8744        # default
 WEBHOOK_SECRET=your-global-secret
 ```
 
@@ -47,7 +47,7 @@ WEBHOOK_SECRET=your-global-secret
 Once the gateway is running:
 
 ```bash
-curl http://localhost:8644/health
+curl http://localhost:8744/health
 ```
 
 Expected response:
@@ -81,7 +81,7 @@ platforms:
   webhook:
     enabled: true
     extra:
-      port: 8644
+      port: 8744
       secret: "global-fallback-secret"
       routes:
         github-pr:
@@ -154,7 +154,7 @@ This walkthrough sets up automatic code review on every pull request.
 ### 1. Create the webhook in GitHub
 
 1. Go to your repository → **Settings** → **Webhooks** → **Add webhook**
-2. Set **Payload URL** to `http://your-server:8644/webhooks/github-pr`
+2. Set **Payload URL** to `http://your-server:8744/webhooks/github-pr`
 3. Set **Content type** to `application/json`
 4. Set **Secret** to match your route config (e.g. `github-webhook-secret`)
 5. Under **Which events?**, select **Let me select individual events** and check **Pull requests**
@@ -162,7 +162,7 @@ This walkthrough sets up automatic code review on every pull request.
 
 ### 2. Add the route config
 
-Add the `github-pr` route to your `~/.hermes/config.yaml` as shown in the example above.
+Add the `github-pr` route to your `~/.openzuma/config.yaml` as shown in the example above.
 
 ### 3. Ensure `gh` CLI is authenticated
 
@@ -174,7 +174,7 @@ gh auth login
 
 ### 4. Test it
 
-Open a pull request on the repository. The webhook fires, Hermes processes the event, and posts a review comment on the PR.
+Open a pull request on the repository. The webhook fires, Openzuma processes the event, and posts a review comment on the PR.
 
 ---
 
@@ -185,7 +185,7 @@ GitLab webhooks work similarly but use a different authentication mechanism. Git
 ### 1. Create the webhook in GitLab
 
 1. Go to your project → **Settings** → **Webhooks**
-2. Set the **URL** to `http://your-server:8644/webhooks/gitlab-mr`
+2. Set the **URL** to `http://your-server:8744/webhooks/gitlab-mr`
 3. Enter your **Secret token**
 4. Select **Merge request events** (and any other events you want)
 5. Click **Add webhook**
@@ -268,7 +268,7 @@ platforms:
   webhook:
     enabled: true
     extra:
-      port: 8644
+      port: 8744
       secret: "global-secret"
       routes:
         antenna-matches:
@@ -280,12 +280,12 @@ platforms:
             chat_id: "{match.telegram_chat_id}"
 ```
 
-Your Supabase edge function signs the payload with HMAC-SHA256 and POSTs to `https://your-server:8644/webhooks/antenna-matches`. The webhook adapter validates the signature, renders the template from the payload, delivers to Telegram, and returns `200 OK`.
+Your Supabase edge function signs the payload with HMAC-SHA256 and POSTs to `https://your-server:8744/webhooks/antenna-matches`. The webhook adapter validates the signature, renders the template from the payload, delivers to Telegram, and returns `200 OK`.
 
 ### Example: Dynamic subscription via CLI
 
 ```bash
-hermes webhook subscribe antenna-matches \
+openzuma webhook subscribe antenna-matches \
   --deliver telegram \
   --deliver-chat-id "123456789" \
   --deliver-only \
@@ -317,12 +317,12 @@ hermes webhook subscribe antenna-matches \
 
 ## Dynamic Subscriptions (CLI) {#dynamic-subscriptions}
 
-In addition to static routes in `config.yaml`, you can create webhook subscriptions dynamically using the `hermes webhook` CLI command. This is especially useful when the agent itself needs to set up event-driven triggers.
+In addition to static routes in `config.yaml`, you can create webhook subscriptions dynamically using the `openzuma webhook` CLI command. This is especially useful when the agent itself needs to set up event-driven triggers.
 
 ### Create a subscription
 
 ```bash
-hermes webhook subscribe github-issues \
+openzuma webhook subscribe github-issues \
   --events "issues" \
   --prompt "New issue #{issue.number}: {issue.title}\nBy: {issue.user.login}\n\n{issue.body}" \
   --deliver telegram \
@@ -335,25 +335,25 @@ This returns the webhook URL and an auto-generated HMAC secret. Configure your s
 ### List subscriptions
 
 ```bash
-hermes webhook list
+openzuma webhook list
 ```
 
 ### Remove a subscription
 
 ```bash
-hermes webhook remove github-issues
+openzuma webhook remove github-issues
 ```
 
 ### Test a subscription
 
 ```bash
-hermes webhook test github-issues
-hermes webhook test github-issues --payload '{"issue": {"number": 42, "title": "Test"}}'
+openzuma webhook test github-issues
+openzuma webhook test github-issues --payload '{"issue": {"number": 42, "title": "Test"}}'
 ```
 
 ### How dynamic subscriptions work
 
-- Subscriptions are stored in `~/.hermes/webhook_subscriptions.json`
+- Subscriptions are stored in `~/.openzuma/webhook_subscriptions.json`
 - The webhook adapter hot-reloads this file on each incoming request (mtime-gated, negligible overhead)
 - Static routes from `config.yaml` always take precedence over dynamic ones with the same name
 - Dynamic subscriptions use the same route format and capabilities as static routes (events, prompt templates, skills, delivery)
@@ -361,7 +361,7 @@ hermes webhook test github-issues --payload '{"issue": {"number": 42, "title": "
 
 ### Agent-driven subscriptions
 
-The agent can create subscriptions via the terminal tool when guided by the `webhook-subscriptions` skill. Ask the agent to "set up a webhook for GitHub issues" and it will run the appropriate `hermes webhook subscribe` command.
+The agent can create subscriptions via the terminal tool when guided by the `webhook-subscriptions` skill. Ask the agent to "set up a webhook for GitHub issues" and it will run the appropriate `openzuma webhook subscribe` command.
 
 ---
 
@@ -424,8 +424,8 @@ Webhook payloads contain attacker-controlled data — PR titles, commit messages
 ### Webhook not arriving
 
 - Verify the port is exposed and accessible from the webhook source
-- Check firewall rules — port `8644` (or your configured port) must be open
-- Verify the URL path matches: `http://your-server:8644/webhooks/<route-name>`
+- Check firewall rules — port `8744` (or your configured port) must be open
+- Verify the URL path matches: `http://your-server:8744/webhooks/<route-name>`
 - Use the `/health` endpoint to confirm the server is running
 
 ### Signature validation failing
@@ -444,7 +444,7 @@ Webhook payloads contain attacker-controlled data — PR titles, commit messages
 
 ### Agent not responding
 
-- Run the gateway in foreground to see logs: `hermes gateway run`
+- Run the gateway in foreground to see logs: `openzuma gateway run`
 - Check that the prompt template is rendering correctly
 - Verify the delivery target is configured and connected
 
@@ -466,5 +466,5 @@ Webhook payloads contain attacker-controlled data — PR titles, commit messages
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `WEBHOOK_ENABLED` | Enable the webhook platform adapter | `false` |
-| `WEBHOOK_PORT` | HTTP server port for receiving webhooks | `8644` |
+| `WEBHOOK_PORT` | HTTP server port for receiving webhooks | `8744` |
 | `WEBHOOK_SECRET` | Global HMAC secret (used as fallback when routes don't specify their own) | _(none)_ |

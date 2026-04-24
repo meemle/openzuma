@@ -13,18 +13,18 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from hermes_constants import get_hermes_home
-from hermes_cli.env_loader import load_hermes_dotenv
+from openzuma_constants import get_openzuma_home
+from openzuma_cli.env_loader import load_openzuma_dotenv
 
 logger = logging.getLogger(__name__)
 
-_hermes_home = get_hermes_home()
-load_hermes_dotenv(
-    hermes_home=_hermes_home, project_env=Path(__file__).parent.parent / ".env"
+_openzuma_home = get_openzuma_home()
+load_openzuma_dotenv(
+    openzuma_home=_openzuma_home, project_env=Path(__file__).parent.parent / ".env"
 )
 
 try:
-    from hermes_cli.banner import prefetch_update_check
+    from openzuma_cli.banner import prefetch_update_check
 
     prefetch_update_check()
 except Exception:
@@ -43,7 +43,7 @@ _cfg_lock = threading.Lock()
 _cfg_cache: dict | None = None
 _cfg_mtime: float | None = None
 _SLASH_WORKER_TIMEOUT_S = max(
-    5.0, float(os.environ.get("HERMES_TUI_SLASH_TIMEOUT_S", "45") or 45)
+    5.0, float(os.environ.get("OPENZUMA_TUI_SLASH_TIMEOUT_S", "45") or 45)
 )
 
 # ── Async RPC dispatch (#12546) ──────────────────────────────────────
@@ -67,7 +67,7 @@ _LONG_HANDLERS = frozenset(
 )
 
 _pool = concurrent.futures.ThreadPoolExecutor(
-    max_workers=max(2, int(os.environ.get("HERMES_TUI_RPC_POOL_WORKERS", "4") or 4)),
+    max_workers=max(2, int(os.environ.get("OPENZUMA_TUI_RPC_POOL_WORKERS", "4") or 4)),
     thread_name_prefix="tui-rpc",
 )
 atexit.register(lambda: _pool.shutdown(wait=False, cancel_futures=True))
@@ -80,7 +80,7 @@ sys.stdout = sys.stderr
 
 
 class _SlashWorker:
-    """Persistent HermesCLI subprocess for slash commands."""
+    """Persistent OpenzumaCLI subprocess for slash commands."""
 
     def __init__(self, session_key: str, model: str):
         self._lock = threading.Lock()
@@ -176,7 +176,7 @@ atexit.register(
 def _get_db():
     global _db, _db_error
     if _db is None:
-        from hermes_state import SessionDB
+        from openzuma_state import SessionDB
 
         try:
             _db = SessionDB()
@@ -337,7 +337,7 @@ def _load_cfg() -> dict:
     try:
         import yaml
 
-        p = _hermes_home / "config.yaml"
+        p = _openzuma_home / "config.yaml"
         mtime = p.stat().st_mtime if p.exists() else None
         with _cfg_lock:
             if _cfg_cache is not None and _cfg_mtime == mtime:
@@ -360,7 +360,7 @@ def _save_cfg(cfg: dict):
     global _cfg_cache, _cfg_mtime
     import yaml
 
-    path = _hermes_home / "config.yaml"
+    path = _openzuma_home / "config.yaml"
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f)
     with _cfg_lock:
@@ -393,9 +393,9 @@ def _clear_session_context(tokens: list) -> None:
 
 def _enable_gateway_prompts() -> None:
     """Route approvals through gateway callbacks instead of CLI input()."""
-    os.environ["HERMES_GATEWAY_SESSION"] = "1"
-    os.environ["HERMES_EXEC_ASK"] = "1"
-    os.environ["HERMES_INTERACTIVE"] = "1"
+    os.environ["OPENZUMA_GATEWAY_SESSION"] = "1"
+    os.environ["OPENZUMA_EXEC_ASK"] = "1"
+    os.environ["OPENZUMA_INTERACTIVE"] = "1"
 
 
 # ── Blocking prompt factory ──────────────────────────────────────────
@@ -432,7 +432,7 @@ def _clear_pending(sid: str | None = None) -> None:
 
 def resolve_skin() -> dict:
     try:
-        from hermes_cli.skin_engine import init_skin_from_config, get_active_skin
+        from openzuma_cli.skin_engine import init_skin_from_config, get_active_skin
 
         init_skin_from_config(_load_cfg())
         skin = get_active_skin()
@@ -450,7 +450,7 @@ def resolve_skin() -> dict:
 
 
 def _resolve_model() -> str:
-    env = os.environ.get("HERMES_MODEL", "")
+    env = os.environ.get("OPENZUMA_MODEL", "")
     if env:
         return env
     m = _load_cfg().get("model", "")
@@ -485,7 +485,7 @@ def _coerce_statusbar(raw) -> str:
 
 
 def _load_reasoning_config() -> dict | None:
-    from hermes_constants import parse_reasoning_effort
+    from openzuma_constants import parse_reasoning_effort
 
     effort = str(_load_cfg().get("agent", {}).get("reasoning_effort", "") or "").strip()
     return parse_reasoning_effort(effort)
@@ -518,8 +518,8 @@ def _load_tool_progress_mode() -> str:
 
 def _load_enabled_toolsets() -> list[str] | None:
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.tools_config import _get_platform_tools
+        from openzuma_cli.config import load_config
+        from openzuma_cli.tools_config import _get_platform_tools
 
         enabled = sorted(
             _get_platform_tools(load_config(), "cli", include_default_mcp_servers=False)
@@ -554,7 +554,7 @@ def _restart_slash_worker(session: dict):
 
 
 def _persist_model_switch(result) -> None:
-    from hermes_cli.config import save_config
+    from openzuma_cli.config import save_config
 
     cfg = _load_cfg()
     model_cfg = cfg.get("model")
@@ -572,8 +572,8 @@ def _persist_model_switch(result) -> None:
 
 
 def _apply_model_switch(sid: str, session: dict, raw_input: str) -> dict:
-    from hermes_cli.model_switch import parse_model_flags, switch_model
-    from hermes_cli.runtime_provider import resolve_runtime_provider
+    from openzuma_cli.model_switch import parse_model_flags, switch_model
+    from openzuma_cli.runtime_provider import resolve_runtime_provider
 
     model_input, explicit_provider, persist_global = parse_model_flags(raw_input)
     if not model_input:
@@ -615,13 +615,13 @@ def _apply_model_switch(sid: str, session: dict, raw_input: str) -> dict:
         _restart_slash_worker(session)
         _emit("session.info", sid, _session_info(agent))
 
-    os.environ["HERMES_MODEL"] = result.new_model
+    os.environ["OPENZUMA_MODEL"] = result.new_model
     # Keep the process-level provider env var in sync with the user's explicit
     # choice so any ambient re-resolution (credential pool refresh, compressor
     # rebuild, aux clients) resolves to the new provider instead of the
     # original one persisted in config or env.
     if result.target_provider:
-        os.environ["HERMES_INFERENCE_PROVIDER"] = result.target_provider
+        os.environ["OPENZUMA_INFERENCE_PROVIDER"] = result.target_provider
     if persist_global:
         _persist_model_switch(result)
     return {"value": result.new_model, "warning": result.warning_message or ""}
@@ -717,7 +717,7 @@ def _session_info(agent) -> dict:
         "usage": _get_usage(agent),
     }
     try:
-        from hermes_cli import __version__, __release_date__
+        from openzuma_cli import __version__, __release_date__
 
         info["version"] = __version__
         info["release_date"] = __release_date__
@@ -734,7 +734,7 @@ def _session_info(agent) -> dict:
     except Exception:
         pass
     try:
-        from hermes_cli.banner import get_available_skills
+        from openzuma_cli.banner import get_available_skills
 
         info["skills"] = get_available_skills()
     except Exception:
@@ -746,8 +746,8 @@ def _session_info(agent) -> dict:
     except Exception:
         info["mcp_servers"] = []
     try:
-        from hermes_cli.banner import get_update_result
-        from hermes_cli.config import recommended_update_command
+        from openzuma_cli.banner import get_update_result
+        from openzuma_cli.config import recommended_update_command
 
         info["update_behind"] = get_update_result(timeout=0.5)
         info["update_command"] = recommended_update_command()
@@ -979,7 +979,7 @@ def _wire_callbacks(sid: str):
                 "skipped": True,
                 "message": "skipped",
             }
-        from hermes_cli.config import save_env_value_secure
+        from openzuma_cli.config import save_env_value_secure
 
         return {
             **save_env_value_secure(env_var, val),
@@ -1001,7 +1001,7 @@ def _resolve_personality_prompt(cfg: dict) -> str:
         personalities = load_cli_config().get("agent", {}).get("personalities", {})
     except Exception:
         try:
-            from hermes_cli.config import load_config as _load_full_cfg
+            from openzuma_cli.config import load_config as _load_full_cfg
 
             personalities = _load_full_cfg().get("agent", {}).get("personalities", {})
         except Exception:
@@ -1030,7 +1030,7 @@ def _available_personalities(cfg: dict | None = None) -> dict:
         return load_cli_config().get("agent", {}).get("personalities", {}) or {}
     except Exception:
         try:
-            from hermes_cli.config import load_config as _load_full_cfg
+            from openzuma_cli.config import load_config as _load_full_cfg
 
             return _load_full_cfg().get("agent", {}).get("personalities", {}) or {}
         except Exception:
@@ -1142,7 +1142,7 @@ def _reset_session_agent(sid: str, session: dict) -> dict:
 
 def _make_agent(sid: str, key: str, session_id: str | None = None):
     from run_agent import AIAgent
-    from hermes_cli.runtime_provider import resolve_runtime_provider
+    from openzuma_cli.runtime_provider import resolve_runtime_provider
 
     cfg = _load_cfg()
     system_prompt = cfg.get("agent", {}).get("system_prompt", "") or ""
@@ -1628,7 +1628,7 @@ def _(rid, params: dict) -> dict:
     import time as _time
 
     filename = os.path.abspath(
-        f"hermes_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json"
+        f"openzuma_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json"
     )
     try:
         with open(filename, "w") as f:
@@ -1790,15 +1790,15 @@ def _(rid, params: dict) -> dict:
 # from the event stream).  On turn-complete it posts the final tree here;
 # /replay and /replay-diff fetch past snapshots by session_id + filename.
 #
-# Layout:  $HERMES_HOME/spawn-trees/<session_id>/<timestamp>.json
+# Layout:  $OPENZUMA_HOME/spawn-trees/<session_id>/<timestamp>.json
 # Each file contains { session_id, started_at, finished_at, subagents: [...] }.
 
 
 def _spawn_trees_root():
     from pathlib import Path as _P
-    from hermes_constants import get_hermes_home
+    from openzuma_constants import get_openzuma_home
 
-    root = get_hermes_home() / "spawn-trees"
+    root = get_openzuma_home() / "spawn-trees"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -2148,12 +2148,12 @@ def _(rid, params: dict) -> dict:
     if err:
         return err
     try:
-        from hermes_cli.clipboard import has_clipboard_image, save_clipboard_image
+        from openzuma_cli.clipboard import has_clipboard_image, save_clipboard_image
     except Exception as e:
         return _err(rid, 5027, f"clipboard unavailable: {e}")
 
     session["image_counter"] = session.get("image_counter", 0) + 1
-    img_dir = _hermes_home / "images"
+    img_dir = _openzuma_home / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
     img_path = (
         img_dir
@@ -2492,12 +2492,12 @@ def _(rid, params: dict) -> dict:
                     enable_session_yolo(session["session_key"])
                     nv = "1"
             else:
-                current = bool(os.environ.get("HERMES_YOLO_MODE"))
+                current = bool(os.environ.get("OPENZUMA_YOLO_MODE"))
                 if current:
-                    os.environ.pop("HERMES_YOLO_MODE", None)
+                    os.environ.pop("OPENZUMA_YOLO_MODE", None)
                     nv = "0"
                 else:
-                    os.environ["HERMES_YOLO_MODE"] = "1"
+                    os.environ["OPENZUMA_YOLO_MODE"] = "1"
                     nv = "1"
             return _ok(rid, {"key": key, "value": nv})
         except Exception as e:
@@ -2505,7 +2505,7 @@ def _(rid, params: dict) -> dict:
 
     if key == "reasoning":
         try:
-            from hermes_constants import parse_reasoning_effort
+            from openzuma_constants import parse_reasoning_effort
 
             arg = str(value or "").strip().lower()
             if arg in ("show", "on"):
@@ -2625,7 +2625,7 @@ def _(rid, params: dict) -> dict:
     key = params.get("key", "")
     if key == "provider":
         try:
-            from hermes_cli.models import list_available_providers, normalize_provider
+            from openzuma_cli.models import list_available_providers, normalize_provider
 
             model = _resolve_model()
             parts = model.split("/", 1)
@@ -2642,9 +2642,9 @@ def _(rid, params: dict) -> dict:
         except Exception as e:
             return _err(rid, 5013, str(e))
     if key == "profile":
-        from hermes_constants import display_hermes_home
+        from openzuma_constants import display_openzuma_home
 
-        return _ok(rid, {"home": str(_hermes_home), "display": display_hermes_home()})
+        return _ok(rid, {"home": str(_openzuma_home), "display": display_openzuma_home()})
     if key == "full":
         return _ok(rid, {"config": _load_cfg()})
     if key == "prompt":
@@ -2705,7 +2705,7 @@ def _(rid, params: dict) -> dict:
         )
         return _ok(rid, {"value": _coerce_statusbar(raw)})
     if key == "mtime":
-        cfg_path = _hermes_home / "config.yaml"
+        cfg_path = _openzuma_home / "config.yaml"
         try:
             return _ok(
                 rid, {"mtime": cfg_path.stat().st_mtime if cfg_path.exists() else 0}
@@ -2718,7 +2718,7 @@ def _(rid, params: dict) -> dict:
 @method("setup.status")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.main import _has_any_provider_configured
+        from openzuma_cli.main import _has_any_provider_configured
 
         return _ok(rid, {"provider_configured": bool(_has_any_provider_configured())})
     except Exception as e:
@@ -2791,7 +2791,7 @@ _PENDING_INPUT_COMMANDS: frozenset[str] = frozenset(
 def _(rid, params: dict) -> dict:
     """Registry-backed slash metadata for the TUI — categorized, no aliases."""
     try:
-        from hermes_cli.commands import (
+        from openzuma_cli.commands import (
             COMMAND_REGISTRY,
             SUBCOMMANDS,
             _build_description,
@@ -2889,22 +2889,22 @@ def _(rid, params: dict) -> dict:
 def _cli_exec_blocked(argv: list[str]) -> str | None:
     """Return user hint if this argv must not run headless in the gateway process."""
     if not argv:
-        return "bare `hermes` is interactive — use `/hermes chat -q …` or run `hermes` in another terminal"
+        return "bare `openzuma` is interactive — use `/openzuma chat -q …` or run `openzuma` in another terminal"
     a0 = argv[0].lower()
     if a0 == "setup":
-        return "`hermes setup` needs a full terminal — run it outside the TUI"
+        return "`openzuma setup` needs a full terminal — run it outside the TUI"
     if a0 == "gateway":
-        return "`hermes gateway` is long-running — run it in another terminal"
+        return "`openzuma gateway` is long-running — run it in another terminal"
     if a0 == "sessions" and len(argv) > 1 and argv[1].lower() == "browse":
-        return "`hermes sessions browse` is interactive — use /resume here, or run browse in another terminal"
+        return "`openzuma sessions browse` is interactive — use /resume here, or run browse in another terminal"
     if a0 == "config" and len(argv) > 1 and argv[1].lower() == "edit":
-        return "`hermes config edit` needs $EDITOR in a real terminal"
+        return "`openzuma config edit` needs $EDITOR in a real terminal"
     return None
 
 
 @method("cli.exec")
 def _(rid, params: dict) -> dict:
-    """Run `python -m hermes_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
+    """Run `python -m openzuma_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
     argv = params.get("argv", [])
     if not isinstance(argv, list) or not all(isinstance(x, str) for x in argv):
         return _err(rid, 4003, "argv must be list[str]")
@@ -2913,7 +2913,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"blocked": True, "hint": hint, "code": -1, "output": ""})
     try:
         r = subprocess.run(
-            [sys.executable, "-m", "hermes_cli.main", *argv],
+            [sys.executable, "-m", "openzuma_cli.main", *argv],
             capture_output=True,
             text=True,
             timeout=min(int(params.get("timeout", 240)), 600),
@@ -2934,7 +2934,7 @@ def _(rid, params: dict) -> dict:
 @method("command.resolve")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.commands import resolve_command
+        from openzuma_cli.commands import resolve_command
 
         r = resolve_command(params.get("name", ""))
         if r:
@@ -2953,7 +2953,7 @@ def _(rid, params: dict) -> dict:
 
 def _resolve_name(name: str) -> str:
     try:
-        from hermes_cli.commands import resolve_command
+        from openzuma_cli.commands import resolve_command
 
         r = resolve_command(name)
         return r.name if r else name
@@ -2996,7 +2996,7 @@ def _(rid, params: dict) -> dict:
             return _ok(rid, {"type": "alias", "target": qc.get("target", "")})
 
     try:
-        from hermes_cli.plugins import get_plugin_command_handler
+        from openzuma_cli.plugins import get_plugin_command_handler
 
         handler = get_plugin_command_handler(name)
         if handler:
@@ -3131,7 +3131,7 @@ def _(rid, params: dict) -> dict:
 
     _paste_counter += 1
     line_count = text.count("\n") + 1
-    paste_dir = _hermes_home / "pastes"
+    paste_dir = _openzuma_home / "pastes"
     paste_dir.mkdir(parents=True, exist_ok=True)
 
     from datetime import datetime
@@ -3249,7 +3249,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"items": []})
 
     try:
-        from hermes_cli.commands import SlashCommandCompleter
+        from openzuma_cli.commands import SlashCommandCompleter
         from prompt_toolkit.document import Document
         from prompt_toolkit.formatted_text import to_plain_text
 
@@ -3296,7 +3296,7 @@ def _(rid, params: dict) -> dict:
 @method("model.options")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.model_switch import list_authenticated_providers
+        from openzuma_cli.model_switch import list_authenticated_providers
 
         session = _sessions.get(params.get("session_id", ""))
         agent = session.get("agent") if session else None
@@ -3304,7 +3304,7 @@ def _(rid, params: dict) -> dict:
         current_provider = getattr(agent, "provider", "") or ""
         current_model = getattr(agent, "model", "") or _resolve_model()
         # list_authenticated_providers already populates each provider's
-        # "models" with the curated list (same source as `hermes model` and
+        # "models" with the curated list (same source as `openzuma model` and
         # classic CLI's /model picker). Do NOT overwrite with live
         # provider_model_ids() — that bypasses curation and pulls in
         # non-agentic models (e.g. Nous /models returns ~400 IDs including
@@ -3459,7 +3459,7 @@ def _(rid, params: dict) -> dict:
 def _(rid, params: dict) -> dict:
     action = params.get("action", "status")
     if action == "status":
-        env = os.environ.get("HERMES_VOICE", "").strip()
+        env = os.environ.get("OPENZUMA_VOICE", "").strip()
         if env in {"0", "1"}:
             return _ok(rid, {"enabled": env == "1"})
         return _ok(
@@ -3472,7 +3472,7 @@ def _(rid, params: dict) -> dict:
         )
     if action in ("on", "off"):
         enabled = action == "on"
-        os.environ["HERMES_VOICE"] = "1" if enabled else "0"
+        os.environ["OPENZUMA_VOICE"] = "1" if enabled else "0"
         _write_config_key("display.voice_enabled", enabled)
         return _ok(rid, {"enabled": action == "on"})
     return _err(rid, 4013, f"unknown voice action: {action}")
@@ -3483,12 +3483,12 @@ def _(rid, params: dict) -> dict:
     action = params.get("action", "start")
     try:
         if action == "start":
-            from hermes_cli.voice import start_recording
+            from openzuma_cli.voice import start_recording
 
             start_recording()
             return _ok(rid, {"status": "recording"})
         if action == "stop":
-            from hermes_cli.voice import stop_and_transcribe
+            from openzuma_cli.voice import stop_and_transcribe
 
             return _ok(rid, {"text": stop_and_transcribe() or ""})
         return _err(rid, 4019, f"unknown voice action: {action}")
@@ -3506,7 +3506,7 @@ def _(rid, params: dict) -> dict:
     if not text:
         return _err(rid, 4020, "text required")
     try:
-        from hermes_cli.voice import speak_text
+        from openzuma_cli.voice import speak_text
 
         threading.Thread(target=speak_text, args=(text,), daemon=True).start()
         return _ok(rid, {"status": "speaking"})
@@ -3703,7 +3703,7 @@ def _(rid, params: dict) -> dict:
 @method("plugins.list")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.plugins import get_plugin_manager
+        from openzuma_cli.plugins import get_plugin_manager
 
         return _ok(
             rid,
@@ -3727,9 +3727,9 @@ def _(rid, params: dict) -> dict:
     try:
         cfg = _load_cfg()
         model = _resolve_model()
-        api_key = os.environ.get("HERMES_API_KEY", "") or cfg.get("api_key", "")
+        api_key = os.environ.get("OPENZUMA_API_KEY", "") or cfg.get("api_key", "")
         masked = f"****{api_key[-4:]}" if len(api_key) > 4 else "(not set)"
-        base_url = os.environ.get("HERMES_BASE_URL", "") or cfg.get("base_url", "")
+        base_url = os.environ.get("OPENZUMA_BASE_URL", "") or cfg.get("base_url", "")
 
         sections = [
             {
@@ -3752,7 +3752,7 @@ def _(rid, params: dict) -> dict:
                 "title": "Environment",
                 "rows": [
                     ["Working Dir", os.getcwd()],
-                    ["Config File", str(_hermes_home / "config.yaml")],
+                    ["Config File", str(_openzuma_home / "config.yaml")],
                 ],
             },
         ]
@@ -3844,8 +3844,8 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 4018, "names required")
 
     try:
-        from hermes_cli.config import load_config, save_config
-        from hermes_cli.tools_config import (
+        from openzuma_cli.config import load_config, save_config
+        from openzuma_cli.tools_config import (
             CONFIGURABLE_TOOLSETS,
             _apply_mcp_change,
             _apply_toolset_change,
@@ -3987,11 +3987,11 @@ def _(rid, params: dict) -> dict:
     action, query = params.get("action", "list"), params.get("query", "")
     try:
         if action == "list":
-            from hermes_cli.banner import get_available_skills
+            from openzuma_cli.banner import get_available_skills
 
             return _ok(rid, {"skills": get_available_skills()})
         if action == "search":
-            from hermes_cli.skills_hub import (
+            from openzuma_cli.skills_hub import (
                 unified_search,
                 GitHubAuth,
                 create_source_router,
@@ -4015,7 +4015,7 @@ def _(rid, params: dict) -> dict:
                 },
             )
         if action == "install":
-            from hermes_cli.skills_hub import do_install
+            from openzuma_cli.skills_hub import do_install
 
             class _Q:
                 def print(self, *a, **k):
@@ -4024,7 +4024,7 @@ def _(rid, params: dict) -> dict:
             do_install(query, skip_confirm=True, console=_Q())
             return _ok(rid, {"installed": True, "name": query})
         if action == "browse":
-            from hermes_cli.skills_hub import browse_skills
+            from openzuma_cli.skills_hub import browse_skills
 
             pg = int(params.get("page", 0) or 0) or (
                 int(query) if query.isdigit() else 1
@@ -4033,7 +4033,7 @@ def _(rid, params: dict) -> dict:
                 rid, browse_skills(page=pg, page_size=int(params.get("page_size", 20)))
             )
         if action == "inspect":
-            from hermes_cli.skills_hub import inspect_skill
+            from openzuma_cli.skills_hub import inspect_skill
 
             return _ok(rid, {"info": inspect_skill(query) or {}})
         return _err(rid, 4017, f"unknown skills action: {action}")

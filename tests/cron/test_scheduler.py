@@ -638,12 +638,12 @@ class TestRunJobSessionPersistence:
         }
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "test-key",
                      "base_url": "https://example.invalid/v1",
@@ -686,12 +686,12 @@ class TestRunJobSessionPersistence:
         }
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -735,7 +735,7 @@ class TestRunJobSessionPersistence:
 
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler.get_due_jobs", return_value=[job]), \
              patch("cron.scheduler.advance_next_run"), \
              patch("cron.scheduler.mark_job_run") as mock_mark, \
@@ -763,9 +763,9 @@ class TestRunJobSessionPersistence:
 
         (tmp_path / ".env").write_text("TELEGRAM_HOME_CHANNEL=-2002\n")
         monkeypatch.delenv("TELEGRAM_HOME_CHANNEL", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_PLATFORM", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID", raising=False)
+        monkeypatch.delenv("OPENZUMA_CRON_AUTO_DELIVER_PLATFORM", raising=False)
+        monkeypatch.delenv("OPENZUMA_CRON_AUTO_DELIVER_CHAT_ID", raising=False)
+        monkeypatch.delenv("OPENZUMA_CRON_AUTO_DELIVER_THREAD_ID", raising=False)
 
         class FakeAgent:
             def __init__(self, *args, **kwargs):
@@ -773,15 +773,15 @@ class TestRunJobSessionPersistence:
 
             def run_conversation(self, *args, **kwargs):
                 from gateway.session_context import get_session_env
-                seen["platform"] = get_session_env("HERMES_CRON_AUTO_DELIVER_PLATFORM") or None
-                seen["chat_id"] = get_session_env("HERMES_CRON_AUTO_DELIVER_CHAT_ID") or None
-                seen["thread_id"] = get_session_env("HERMES_CRON_AUTO_DELIVER_THREAD_ID") or None
+                seen["platform"] = get_session_env("OPENZUMA_CRON_AUTO_DELIVER_PLATFORM") or None
+                seen["chat_id"] = get_session_env("OPENZUMA_CRON_AUTO_DELIVER_CHAT_ID") or None
+                seen["thread_id"] = get_session_env("OPENZUMA_CRON_AUTO_DELIVER_THREAD_ID") or None
                 return {"final_response": "ok"}
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -801,9 +801,9 @@ class TestRunJobSessionPersistence:
             "chat_id": "-2002",
             "thread_id": None,
         }
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_PLATFORM") is None
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID") is None
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID") is None
+        assert os.getenv("OPENZUMA_CRON_AUTO_DELIVER_PLATFORM") is None
+        assert os.getenv("OPENZUMA_CRON_AUTO_DELIVER_CHAT_ID") is None
+        assert os.getenv("OPENZUMA_CRON_AUTO_DELIVER_THREAD_ID") is None
         fake_db.close.assert_called_once()
 
 
@@ -821,7 +821,7 @@ class TestRunJobConfigLogging:
             "prompt": "hello",
         }
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
              patch("run_agent.AIAgent") as mock_agent_cls:
@@ -850,7 +850,7 @@ class TestRunJobConfigLogging:
             "prompt": "hello",
         }
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
              patch("run_agent.AIAgent") as mock_agent_cls:
@@ -889,12 +889,12 @@ class TestRunJobSkillBacked:
             assert "NOTION_API_KEY" in get_all_passthrough()
             return {"final_response": "ok"}
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -948,13 +948,13 @@ class TestRunJobSkillBacked:
             assert any("google_token.json" in v for v in registered.values())
             return {"final_response": "ok"}
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
-             patch("tools.credential_files._resolve_hermes_home", return_value=tmp_path), \
+             patch("tools.credential_files._resolve_openzuma_home", return_value=tmp_path), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -987,12 +987,12 @@ class TestRunJobSkillBacked:
 
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -1033,12 +1033,12 @@ class TestRunJobSkillBacked:
         def _skill_view(name):
             return json.dumps({"success": True, "content": f"# {name}\nInstructions for {name}."})
 
-        with patch("cron.scheduler._hermes_home", tmp_path), \
+        with patch("cron.scheduler._openzuma_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("hermes_state.SessionDB", return_value=fake_db), \
+             patch("openzuma_state.SessionDB", return_value=fake_db), \
              patch(
-                 "hermes_cli.runtime_provider.resolve_runtime_provider",
+                 "openzuma_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -1259,7 +1259,7 @@ class TestRunJobWakeGate:
             "requested_provider": None,
         }
         with patch(
-            "hermes_cli.runtime_provider.resolve_runtime_provider",
+            "openzuma_cli.runtime_provider.resolve_runtime_provider",
             return_value=fake_runtime,
         ):
             yield
@@ -1524,8 +1524,8 @@ class TestParallelTick:
             )
             import time
             time.sleep(0.05)  # give other thread time to set its vars
-            platform = get_session_env("HERMES_SESSION_PLATFORM")
-            chat_id = get_session_env("HERMES_SESSION_CHAT_ID")
+            platform = get_session_env("OPENZUMA_SESSION_PLATFORM")
+            chat_id = get_session_env("OPENZUMA_SESSION_CHAT_ID")
             seen[job["id"]] = {"platform": platform, "chat_id": chat_id}
             clear_session_vars(tokens)
             return (True, "output", "response", None)
@@ -1550,8 +1550,8 @@ class TestParallelTick:
         assert seen["dc-job"] == {"platform": "discord", "chat_id": "222"}
 
     def test_max_parallel_env_var(self, monkeypatch):
-        """HERMES_CRON_MAX_PARALLEL=1 should restore serial behaviour."""
-        monkeypatch.setenv("HERMES_CRON_MAX_PARALLEL", "1")
+        """OPENZUMA_CRON_MAX_PARALLEL=1 should restore serial behaviour."""
+        monkeypatch.setenv("OPENZUMA_CRON_MAX_PARALLEL", "1")
         call_times = []
 
         def mock_run_job(job):

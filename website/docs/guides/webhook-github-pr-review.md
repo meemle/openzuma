@@ -2,14 +2,14 @@
 sidebar_position: 11
 sidebar_label: "GitHub PR Reviews via Webhook"
 title: "Automated GitHub PR Comments with Webhooks"
-description: "Connect Hermes to GitHub so it automatically fetches PR diffs, reviews code changes, and posts comments — triggered by webhooks with no manual prompting"
+description: "Connect Openzuma to GitHub so it automatically fetches PR diffs, reviews code changes, and posts comments — triggered by webhooks with no manual prompting"
 ---
 
 # Automated GitHub PR Comments with Webhooks
 
-This guide walks you through connecting Hermes Agent to GitHub so it automatically fetches a pull request's diff, analyzes the code changes, and posts a comment — triggered by a webhook event with no manual prompting.
+This guide walks you through connecting Openzuma Agent to GitHub so it automatically fetches a pull request's diff, analyzes the code changes, and posts a comment — triggered by a webhook event with no manual prompting.
 
-When a PR is opened or updated, GitHub sends a webhook POST to your Hermes instance. Hermes runs the agent with a prompt that instructs it to retrieve the diff via the `gh` CLI, and the response is posted back to the PR thread.
+When a PR is opened or updated, GitHub sends a webhook POST to your Openzuma instance. Openzuma runs the agent with a prompt that instructs it to retrieve the diff via the `gh` CLI, and the response is posted back to the PR thread.
 
 :::tip Want a simpler setup without a public endpoint?
 If you don't have a public URL or just want to get started quickly, check out [Build a GitHub PR Review Agent](./github-pr-review-agent.md) — uses cron jobs to poll for PRs on a schedule, works behind NAT and firewalls.
@@ -27,23 +27,23 @@ Webhook payloads contain attacker-controlled data — PR titles, commit messages
 
 ## Prerequisites
 
-- Hermes Agent installed and running (`hermes gateway`)
+- Openzuma Agent installed and running (`openzuma gateway`)
 - [`gh` CLI](https://cli.github.com/) installed and authenticated on the gateway host (`gh auth login`)
-- A publicly reachable URL for your Hermes instance (see [Local testing with ngrok](#local-testing-with-ngrok) if running locally)
+- A publicly reachable URL for your Openzuma instance (see [Local testing with ngrok](#local-testing-with-ngrok) if running locally)
 - Admin access to the GitHub repository (required to manage webhooks)
 
 ---
 
 ## Step 1 — Enable the webhook platform
 
-Add the following to your `~/.hermes/config.yaml`:
+Add the following to your `~/.openzuma/config.yaml`:
 
 ```yaml
 platforms:
   webhook:
     enabled: true
     extra:
-      port: 8644          # default; change if another service occupies this port
+      port: 8744          # default; change if another service occupies this port
       rate_limit: 30      # max requests per minute per route (not a global cap)
 
       routes:
@@ -88,7 +88,7 @@ platforms:
 | `deliver_extra.pr_number` | Resolves to the PR number from the payload. |
 
 :::note The payload does not contain code
-The GitHub webhook payload includes PR metadata (title, description, branch names, URLs) but **not the diff**. The prompt above instructs the agent to run `gh pr diff` to fetch the actual changes. The `terminal` tool is included in the default `hermes-webhook` toolset, so no extra configuration is needed.
+The GitHub webhook payload includes PR metadata (title, description, branch names, URLs) but **not the diff**. The prompt above instructs the agent to run `gh pr diff` to fetch the actual changes. The `terminal` tool is included in the default `openzuma-webhook` toolset, so no extra configuration is needed.
 :::
 
 ---
@@ -96,19 +96,19 @@ The GitHub webhook payload includes PR metadata (title, description, branch name
 ## Step 2 — Start the gateway
 
 ```bash
-hermes gateway
+openzuma gateway
 ```
 
 You should see:
 
 ```
-[webhook] Listening on 0.0.0.0:8644 — routes: github-pr-review
+[webhook] Listening on 0.0.0.0:8744 — routes: github-pr-review
 ```
 
 Verify it's running:
 
 ```bash
-curl http://localhost:8644/health
+curl http://localhost:8744/health
 # {"status": "ok", "platform": "webhook"}
 ```
 
@@ -130,22 +130,22 @@ GitHub will immediately send a `ping` event to confirm the connection. It is saf
 
 ## Step 4 — Open a test PR
 
-Create a branch, push a change, and open a PR. Within 30–90 seconds (depending on PR size and model), Hermes should post a review comment.
+Create a branch, push a change, and open a PR. Within 30–90 seconds (depending on PR size and model), Openzuma should post a review comment.
 
 To follow the agent's progress in real time:
 
 ```bash
-tail -f "${HERMES_HOME:-$HOME/.hermes}/logs/gateway.log"
+tail -f "${OPENZUMA_HOME:-$HOME/.openzuma}/logs/gateway.log"
 ```
 
 ---
 
 ## Local testing with ngrok
 
-If Hermes is running on your laptop, use [ngrok](https://ngrok.com/) to expose it:
+If Openzuma is running on your laptop, use [ngrok](https://ngrok.com/) to expose it:
 
 ```bash
-ngrok http 8644
+ngrok http 8744
 ```
 
 Copy the `https://...ngrok-free.app` URL and use it as your GitHub Payload URL. On the free ngrok tier the URL changes each time ngrok restarts — update your GitHub webhook each session. Paid ngrok accounts get a static domain.
@@ -161,7 +161,7 @@ SECRET="your-webhook-secret-here"
 BODY='{"action":"opened","number":99,"pull_request":{"title":"Test PR","body":"Adds a feature.","user":{"login":"testuser"},"head":{"ref":"feat/x"},"base":{"ref":"main"},"html_url":"https://github.com/org/repo/pull/99"},"repository":{"full_name":"org/repo"}}'
 SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print "sha256="$2}')
 
-curl -s -X POST http://localhost:8644/webhooks/github-pr-review \
+curl -s -X POST http://localhost:8744/webhooks/github-pr-review \
   -H "Content-Type: application/json" \
   -H "X-GitHub-Event: pull_request" \
   -H "X-Hub-Signature-256: $SIG" \
@@ -171,11 +171,11 @@ curl -s -X POST http://localhost:8644/webhooks/github-pr-review \
 
 Then watch the agent run:
 ```bash
-tail -f "${HERMES_HOME:-$HOME/.hermes}/logs/gateway.log"
+tail -f "${OPENZUMA_HOME:-$HOME/.openzuma}/logs/gateway.log"
 ```
 
 :::note
-`hermes webhook test <name>` only works for **dynamic subscriptions** created with `hermes webhook subscribe`. It does not read routes from `config.yaml`.
+`openzuma webhook test <name>` only works for **dynamic subscriptions** created with `openzuma webhook subscribe`. It does not read routes from `config.yaml`.
 :::
 
 ---
@@ -196,7 +196,7 @@ The "stop here" instruction prevents a meaningful review, but the agent still ru
 
 ## Using a skill for consistent review style
 
-Load a [Hermes skill](/docs/user-guide/features/skills) to give the agent a consistent review persona. Add `skills` to your route inside `platforms.webhook.extra.routes` in `config.yaml`:
+Load a [Openzuma skill](/docs/user-guide/features/skills) to give the agent a consistent review persona. Add `skills` to your route inside `platforms.webhook.extra.routes` in `config.yaml`:
 
 ```yaml
 platforms:
@@ -226,7 +226,7 @@ platforms:
             pr_number: "{number}"
 ```
 
-> **Note:** Only the first skill in the list that is found is loaded. Hermes does not stack multiple skills — subsequent entries are ignored.
+> **Note:** Only the first skill in the list that is found is loaded. Openzuma does not stack multiple skills — subsequent entries are ignored.
 
 ---
 
@@ -256,7 +256,7 @@ Valid `deliver` values: `log` · `github_comment` · `telegram` · `discord` · 
 
 ## GitLab support
 
-The same adapter works with GitLab. GitLab uses `X-Gitlab-Token` for authentication (plain string match, not HMAC) — Hermes handles both automatically.
+The same adapter works with GitLab. GitLab uses `X-Gitlab-Token` for authentication (plain string match, not HMAC) — Openzuma handles both automatically.
 
 For event filtering, GitLab sets `X-GitLab-Event` to values like `Merge Request Hook`, `Push Hook`, `Pipeline Hook`. Use the exact header value in `events`:
 
@@ -265,7 +265,7 @@ events:
   - Merge Request Hook
 ```
 
-GitLab payload fields differ from GitHub's — e.g. `{object_attributes.title}` for the MR title and `{object_attributes.iid}` for the MR number. The easiest way to discover the full payload structure is GitLab's **Test** button in your webhook settings, combined with the **Recent Deliveries** log. Alternatively, omit `prompt` from your route config — Hermes will then pass the full payload as formatted JSON directly to the agent, and the agent's response (visible in the gateway log with `deliver: log`) will describe its structure.
+GitLab payload fields differ from GitHub's — e.g. `{object_attributes.title}` for the MR title and `{object_attributes.iid}` for the MR number. The easiest way to discover the full payload structure is GitLab's **Test** button in your webhook settings, combined with the **Recent Deliveries** log. Alternatively, omit `prompt` from your route config — Openzuma will then pass the full payload as formatted JSON directly to the agent, and the agent's response (visible in the gateway log with `deliver: log`) will describe its structure.
 
 ---
 
@@ -304,7 +304,7 @@ platforms:
     enabled: true
     extra:
       host: "0.0.0.0"         # bind address (default: 0.0.0.0)
-      port: 8644               # listen port (default: 8644)
+      port: 8744               # listen port (default: 8744)
       secret: ""               # optional global fallback secret
       rate_limit: 30           # requests per minute per route
       max_body_bytes: 1048576  # payload size limit in bytes (default: 1 MB)
@@ -325,5 +325,5 @@ platforms:
 
 - **[Cron-Based PR Reviews](./github-pr-review-agent.md)** — poll for PRs on a schedule, no public endpoint needed
 - **[Webhook Reference](/docs/user-guide/messaging/webhooks)** — full config reference for the webhook platform
-- **[Build a Plugin](/docs/guides/build-a-hermes-plugin)** — package review logic into a shareable plugin
+- **[Build a Plugin](/docs/guides/build-a-openzuma-plugin)** — package review logic into a shareable plugin
 - **[Profiles](/docs/user-guide/profiles)** — run a dedicated reviewer profile with its own memory and config

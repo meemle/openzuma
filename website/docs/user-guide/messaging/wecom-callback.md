@@ -4,10 +4,10 @@ sidebar_position: 15
 
 # WeCom Callback (Self-Built App)
 
-Connect Hermes to WeCom (Enterprise WeChat) as a self-built enterprise application using the callback/webhook model.
+Connect Openzuma to WeCom (Enterprise WeChat) as a self-built enterprise application using the callback/webhook model.
 
 :::info WeCom Bot vs WeCom Callback
-Hermes supports two WeCom integration modes:
+Openzuma supports two WeCom integration modes:
 - **[WeCom Bot](wecom.md)** — bot-style, connects via WebSocket. Simpler setup, works in group chats.
 - **WeCom Callback** (this page) — self-built app, receives encrypted XML callbacks. Shows as a first-class app in users' WeCom sidebar. Supports multi-corp routing.
 :::
@@ -16,7 +16,7 @@ Hermes supports two WeCom integration modes:
 
 1. You register a self-built application in the WeCom Admin Console
 2. WeCom pushes encrypted XML to your HTTP callback endpoint
-3. Hermes decrypts the message, queues it for the agent
+3. Openzuma decrypts the message, queues it for the agent
 4. Immediately acknowledges (silent — nothing displayed to the user)
 5. The agent processes the request (typically 3–30 minutes)
 6. The reply is delivered proactively via the WeCom `message/send` API
@@ -36,7 +36,7 @@ Hermes supports two WeCom integration modes:
 3. In the app settings, create a **Corp Secret**
 4. Note the **Agent ID** from the app's overview page
 5. Under **Receive Messages**, configure the callback URL:
-   - URL: `http://YOUR_PUBLIC_IP:8645/wecom/callback`
+   - URL: `http://YOUR_PUBLIC_IP:8745/wecom/callback`
    - Token: Generate a random token (WeCom provides one)
    - EncodingAESKey: Generate a key (WeCom provides one)
 
@@ -53,14 +53,14 @@ WECOM_CALLBACK_ENCODING_AES_KEY=your-43-char-aes-key
 
 # Optional
 WECOM_CALLBACK_HOST=0.0.0.0
-WECOM_CALLBACK_PORT=8645
+WECOM_CALLBACK_PORT=8745
 WECOM_CALLBACK_ALLOWED_USERS=user1,user2
 ```
 
 ### 3. Start the Gateway
 
 ```bash
-hermes gateway start
+openzuma gateway start
 ```
 
 The callback adapter starts an HTTP server on the configured port. WeCom will verify the callback URL via a GET request, then begin sending messages via POST.
@@ -77,7 +77,7 @@ Set these in `config.yaml` under `platforms.wecom_callback.extra`, or use enviro
 | `token` | — | Callback verification token (required) |
 | `encoding_aes_key` | — | 43-character AES key for callback encryption (required) |
 | `host` | `0.0.0.0` | Bind address for the HTTP callback server |
-| `port` | `8645` | Port for the HTTP callback server |
+| `port` | `8745` | Port for the HTTP callback server |
 | `path` | `/wecom/callback` | URL path for the callback endpoint |
 
 ## Multi-App Routing
@@ -90,7 +90,7 @@ platforms:
     enabled: true
     extra:
       host: "0.0.0.0"
-      port: 8645
+      port: 8745
       apps:
         - name: "dept-a"
           corp_id: "ww_corp_a"
