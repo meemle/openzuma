@@ -17,7 +17,7 @@ Openzuma Agent 是一个功能强大的AI智能助手系统，支持：
 ## 📁 项目结构
 
 ```
-openzuma-agent/
+openzuma/
 ├── run_agent.py          # AIAgent核心类
 ├── model_tools.py        # 工具编排
 ├── toolsets.py           # 工具集定义
