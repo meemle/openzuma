@@ -92,6 +92,8 @@ MIT License
 
 欢迎提交Issue和Pull Request！
 
+致敬OpenClaw、Hermes、Evolver等等。
+
 ## 📞 联系
 
 如有问题，请通过GitHub Issues反馈。:)
