@@ -744,6 +744,59 @@ class GatewayRunner:
         # Track background tasks to prevent garbage collection mid-execution
         self._background_tasks: set = set()
 
+        # Heart module - proactive heartbeat for autonomous messaging
+        self.heart = None
+        try:
+            from heart.integration import load_heart_config, create_heartbeat
+            from openzuma_cli.config import load_config as _load_full_config
+            _full_cfg = _load_full_config()
+            _heart_cfg = load_heart_config(_full_cfg)
+            if _heart_cfg.get("enabled"):
+                self.heart = create_heartbeat(
+                    deliver_func=self._heartbeat_deliver,
+                    config=_heart_cfg,
+                )
+                logger.info("♥ Heart module initialized")
+        except Exception as e:
+            logger.debug("Heart module not available: %s", e)
+
+    async def _heartbeat_deliver(self, message: str) -> bool:
+        """Heart deliver function - routes through DeliveryRouter (platform-agnostic)"""
+        try:
+            from gateway.delivery import DeliveryTarget
+            targets = []
+            # Collect all active session targets
+            if hasattr(self, 'session_store'):
+                for session_key, session_entry in self.session_store.sessions.items():
+                    parts = session_key.split(":")
+                    if len(parts) >= 2:
+                        try:
+                            platform = Platform(parts[0])
+                            targets.append(DeliveryTarget(
+                                platform=platform,
+                                chat_id=parts[1],
+                                thread_id=parts[2] if len(parts) > 2 else None,
+                            ))
+                        except ValueError:
+                            pass
+            # Fallback: use adapter default chats
+            if not targets:
+                for platform, adapter in self.adapters.items():
+                    default_chat = getattr(adapter, 'home_chat_id', None) or \
+                                  getattr(adapter, 'default_chat_id', None)
+                    if default_chat:
+                        targets.append(DeliveryTarget(platform=platform, chat_id=default_chat))
+            if not targets:
+                logger.warning("♥ No delivery targets, heartbeat skipped")
+                return False
+            results = await self.delivery_router.deliver(
+                content=message, targets=targets, job_name="openzuma-heart",
+            )
+            success = any(r.get("success") for r in results.values())
+            return success
+        except Exception as e:
+            logger.error("♥ Heartbeat deliver error: %s", e)
+            return False
 
     def _warn_if_docker_media_delivery_is_risky(self) -> None:
         """Warn when Docker-backed gateways lack an explicit export mount.
@@ -2259,6 +2312,11 @@ class GatewayRunner:
             )
         asyncio.create_task(self._platform_reconnect_watcher())
 
+        # Start heart module if initialized
+        if self.heart:
+            self.heart.start()
+            logger.info("♥ Heart is beating every %d minutes", self.heart.interval_minutes)
+
         logger.info("Press Ctrl+C to stop")
         
         return True
@@ -2566,6 +2624,11 @@ class GatewayRunner:
             )
             self._running = False
             self._draining = True
+
+            # Stop heart module
+            if self.heart:
+                self.heart.stop()
+                logger.info("♥ Heart stopped")
 
             # Notify all chats with active agents BEFORE draining.
             # Adapters are still connected here, so messages can be sent.
