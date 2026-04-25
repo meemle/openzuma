@@ -744,38 +744,45 @@ class GatewayRunner:
         # Track background tasks to prevent garbage collection mid-execution
         self._background_tasks: set = set()
 
-        # Soul module - proactive heartbeat for autonomous messaging
-        self.soul = None
+        # Soul module - SoulBeat 灵魂跳动，定时主动发言
+        self.soulbeat = None
         try:
-            from soul.integration import load_soul_config, create_heartbeat
+            from soul.integration import load_soul_config, create_soulbeat
             from openzuma_cli.config import load_config as _load_full_config
             _full_cfg = _load_full_config()
             _soul_cfg = load_soul_config(_full_cfg)
             if _soul_cfg.get("enabled"):
-                self.soul = create_heartbeat(
-                    deliver_func=self._soul_deliver,
+                self.soulbeat = create_soulbeat(
+                    deliver_func=self._soulbeat_deliver,
                     config=_soul_cfg,
                 )
-                logger.info("♥ Soul module initialized")
+                logger.info("♥ SoulBeat 模块初始化完成")
         except Exception as e:
             logger.debug("Soul module not available: %s", e)
 
-    async def _soul_deliver(self, message: str) -> bool:
-        """Soul deliver function - routes through DeliveryRouter (platform-agnostic)"""
+    async def _soulbeat_deliver(self, message: str) -> bool:
+        """SoulBeat 灵魂跳动推送 - 通过DeliveryRouter路由到所有平台"""
         try:
             from gateway.delivery import DeliveryTarget
             targets = []
             # Collect all active session targets
             if hasattr(self, 'session_store'):
-                for session_key, session_entry in self.session_store.sessions.items():
+                # SessionStore内部属性是_entries，遍历所有活跃session
+                self.session_store._ensure_loaded()
+                for session_key in self.session_store._entries:
                     parts = session_key.split(":")
                     if len(parts) >= 2:
+                        # session_key格式: agent:main:platform:chat_type:chat_id[:thread_id]
+                        # 平台在parts[2]，chat_id在parts[4]
+                        platform_str = parts[2] if len(parts) > 2 else parts[0]
+                        chat_id = parts[4] if len(parts) > 4 else parts[1]
+                        thread_id = parts[5] if len(parts) > 5 else None
                         try:
-                            platform = Platform(parts[0])
+                            platform = Platform(platform_str)
                             targets.append(DeliveryTarget(
                                 platform=platform,
-                                chat_id=parts[1],
-                                thread_id=parts[2] if len(parts) > 2 else None,
+                                chat_id=chat_id,
+                                thread_id=thread_id,
                             ))
                         except ValueError:
                             pass
@@ -787,15 +794,15 @@ class GatewayRunner:
                     if default_chat:
                         targets.append(DeliveryTarget(platform=platform, chat_id=default_chat))
             if not targets:
-                logger.warning("♥ No delivery targets, heartbeat skipped")
+                logger.warning("♥ 没有推送目标，灵魂跳动跳过")
                 return False
             results = await self.delivery_router.deliver(
-                content=message, targets=targets, job_name="openzuma-heart",
+                content=message, targets=targets, job_name="openzuma-soul",
             )
             success = any(r.get("success") for r in results.values())
             return success
         except Exception as e:
-            logger.error("♥ Heartbeat deliver error: %s", e)
+            logger.error("♥ 灵魂跳动推送异常: %s", e)
             return False
 
     def _warn_if_docker_media_delivery_is_risky(self) -> None:
@@ -2313,9 +2320,9 @@ class GatewayRunner:
         asyncio.create_task(self._platform_reconnect_watcher())
 
         # Start soul module if initialized
-        if self.soul:
-            self.soul.start()
-            logger.info("♥ Soul is beating every %d minutes", self.soul.interval_minutes)
+        if self.soulbeat:
+            self.soulbeat.start()
+            logger.info("♥ SoulBeat 灵魂跳动启动，每 %d 分钟跳动一次", self.soulbeat.interval_minutes)
 
         logger.info("Press Ctrl+C to stop")
         
@@ -2626,8 +2633,8 @@ class GatewayRunner:
             self._draining = True
 
             # Stop soul module
-            if self.soul:
-                self.soul.stop()
+            if self.soulbeat:
+                self.soulbeat.stop()
                 logger.info("♥ Soul stopped")
 
             # Notify all chats with active agents BEFORE draining.

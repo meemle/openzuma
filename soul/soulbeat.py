@@ -1,11 +1,11 @@
 """
-Openzuma Soul - 灵魂心跳引擎
-定时主动发言，让openzuma有自主"心跳"
+Openzuma Soul - 灵魂跳动引擎
+定时主动发言，让openzuma有自主"灵魂跳动"
 
 设计原则：
 - Soul是gateway内置组件，通过GatewayRunner的DeliveryRouter推送
 - 不绑定任何具体平台（微信/QQ/Telegram等），平台无关
-- 心跳间隔通过config.yaml配置，也可运行时动态调整
+- 跳动间隔通过config.yaml配置，也可运行时动态调整
 - 话题库可扩展，用户可自定义
 """
 
@@ -95,19 +95,19 @@ def _get_time_period() -> str:
     return ""
 
 
-class Heartbeat:
+class SoulBeat:
     """
-    openzuma的心脏 - 定时主动发言引擎
+    openzuma的灵魂跳动 - 定时主动发言引擎
     
     作为GatewayRunner的内置组件运行，通过DeliveryRouter
-    向所有已连接的平台推送心跳消息。
+    向所有已连接的平台推送灵魂跳动消息。
     
     用法（在GatewayRunner中）:
-        heart = Heartbeat(deliver_func=gateway_runner.heartbeat_deliver)
-        soul.start()  # 启动心跳循环
+        soulbeat = SoulBeat(deliver_func=gateway_runner.soulbeat_deliver)
+        soulbeat.start()  # 启动灵魂跳动循环
     
     配置（config.yaml）:
-        heart:
+        soul:
           enabled: true
           interval_minutes: 10
           custom_topics: []
@@ -123,7 +123,7 @@ class Heartbeat:
         Args:
             deliver_func: 异步发送函数，签名为 async def deliver(msg: str) -> bool
                           由GatewayRunner注入，内部调用DeliveryRouter
-            interval_minutes: 心跳间隔（分钟），默认10分钟
+            interval_minutes: 灵魂跳动间隔（分钟），默认10分钟
             topic_pool: 自定义话题库，为None则使用默认话题库
         """
         self.deliver_func = deliver_func
@@ -133,7 +133,7 @@ class Heartbeat:
         self._running = False
         self._last_topic: Optional[str] = None
         self._beat_count = 0
-        logger.info(f"♥ Heart 初始化: 间隔={interval_minutes}分钟, 话题库={len(self.topic_pool)}条")
+        logger.info(f"♥ SoulBeat 初始化: 间隔={interval_minutes}分钟, 话题库={len(self.topic_pool)}条")
 
     def _pick_topic(self) -> str:
         """随机挑选话题，避免连续重复，加入时段话题"""
@@ -156,32 +156,32 @@ class Heartbeat:
         """跳动一次 - 生成话题并推送"""
         self._beat_count += 1
         topic = self._pick_topic()
-        logger.info(f"♥ 第{self._beat_count}次心跳: {topic[:30]}...")
+        logger.info(f"♥ 第{self._beat_count}次灵魂跳动: {topic[:30]}...")
 
         if self.deliver_func:
             try:
                 await self.deliver_func(topic)
-                logger.info("♥ 心跳消息推送成功")
+                logger.info("♥ 灵魂跳动消息推送成功")
             except Exception as e:
-                logger.error(f"♥ 心跳消息推送失败: {e}")
+                logger.error(f"♥ 灵魂跳动消息推送失败: {e}")
         else:
-            logger.warning("♥ 未配置deliver_func，心跳消息未推送")
+            logger.warning("♥ 未配置deliver_func，灵魂跳动消息未推送")
 
         return topic
 
-    async def _heartbeat_loop(self):
-        """心跳循环（异步）"""
+    async def _soulbeat_loop(self):
+        """灵魂跳动循环（异步）"""
         while self._running:
             try:
                 await self.beat()
             except Exception as e:
-                logger.error(f"♥ 心跳执行异常: {e}")
+                logger.error(f"♥ 灵魂跳动执行异常: {e}")
 
             # 等待间隔，加入±20%随机抖动避免太机械
             base_seconds = self.interval_minutes * 60
             jitter = random.uniform(-0.2, 0.2) * base_seconds
             wait_seconds = base_seconds + jitter
-            logger.info(f"♥ 下一次心跳: {wait_seconds:.0f}秒后")
+            logger.info(f"♥ 下一次灵魂跳动: {wait_seconds:.0f}秒后")
 
             # 分段等待，以便能及时响应stop()
             elapsed = 0
@@ -191,26 +191,26 @@ class Heartbeat:
                 elapsed += chunk
 
     def start(self):
-        """启动心脏（异步，需在event loop中调用）"""
+        """启动灵魂跳动（异步，需在event loop中调用）"""
         if self._running:
-            logger.warning("♥ 心脏已在运行中")
+            logger.warning("♥ 灵魂跳动已在运行中")
             return
         self._running = True
-        self._task = asyncio.ensure_future(self._heartbeat_loop())
-        logger.info(f"♥♥♥ 心脏启动！每{self.interval_minutes}分钟跳动一次 ♥♥♥")
+        self._task = asyncio.ensure_future(self._soulbeat_loop())
+        logger.info(f"♥♥♥ 灵魂跳动启动！每{self.interval_minutes}分钟跳动一次 ♥♥♥")
 
     def stop(self):
-        """停止心脏"""
+        """停止灵魂跳动"""
         self._running = False
         if self._task and not self._task.done():
             self._task.cancel()
         self._task = None
-        logger.info("♥ 心脏已停止")
+        logger.info("♥ 灵魂跳动已停止")
 
     def set_interval(self, minutes: int):
-        """动态调整心跳间隔（下次心跳生效）"""
+        """动态调整跳动间隔（下次跳动生效）"""
         self.interval_minutes = minutes
-        logger.info(f"♥ 心跳间隔已调整为 {minutes}分钟")
+        logger.info(f"♥ 灵魂跳动间隔已调整为 {minutes}分钟")
 
     def add_topic(self, topic: str):
         """添加自定义话题"""
@@ -225,7 +225,7 @@ class Heartbeat:
 
     @property
     def status(self) -> Dict[str, Any]:
-        """获取心脏状态"""
+        """获取灵魂跳动状态"""
         return {
             "running": self._running,
             "interval_minutes": self.interval_minutes,
@@ -236,4 +236,4 @@ class Heartbeat:
 
     def __repr__(self):
         state = "跳动中" if self._running else "静止"
-        return f"<Heartbeat {state} 间隔={self.interval_minutes}min 跳动={self._beat_count}次>"
+        return f"<SoulBeat {state} 间隔={self.interval_minutes}min 跳动={self._beat_count}次>"

@@ -1,17 +1,17 @@
 """
 Openzuma Soul - Gateway集成
-将soul模块集成到GatewayRunner中，实现平台无关的心跳推送
+将soul模块集成到GatewayRunner中，实现平台无关的灵魂跳动推送
 
 集成方式：
-1. GatewayRunner初始化时创建Heartbeat实例
-2. Heartbeat通过DeliveryRouter向所有活跃session推送
+1. GatewayRunner初始化时创建SoulBeat实例
+2. SoulBeat通过DeliveryRouter向所有活跃session推送
 3. 配置通过config.yaml的soul字段管理
 """
 
 import logging
 from typing import Optional, Dict, Any, List
 
-from .heartbeat import Heartbeat
+from .soulbeat import SoulBeat
 
 logger = logging.getLogger("openzuma.soul.integration")
 
@@ -39,51 +39,51 @@ def load_soul_config(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def create_heartbeat(
+def create_soulbeat(
     deliver_func,
     config: Optional[Dict[str, Any]] = None,
-) -> Optional[Heartbeat]:
+) -> Optional[SoulBeat]:
     """
-    根据配置创建Heartbeat实例
+    根据配置创建SoulBeat实例
     
     Args:
         deliver_func: 异步推送函数，由GatewayRunner注入
-        config: heart配置字典（来自load_heart_config）
+        config: soul配置字典（来自load_soul_config）
     
     Returns:
-        Heartbeat实例，如果未启用则返回None
+        SoulBeat实例，如果未启用则返回None
     """
     if config is None:
         config = {"enabled": False, "interval_minutes": 10, "custom_topics": []}
     
     if not config.get("enabled", False):
-        logger.info("♥ Heart模块未启用（soul.enabled未设为true）")
+        logger.info("♥ Soul模块未启用（soul.enabled未设为true）")
         return None
     
     topics = None
     if config.get("custom_topics"):
         topics = config["custom_topics"]
     
-        heart = Heartbeat(
-            deliver_func=deliver_func,
-            interval_minutes=config.get("interval_minutes", 10),
-            topic_pool=topics,
-        )
-        
-        logger.info("♥ Soul模块已创建并启用")
-        return heart
+    soulbeat = SoulBeat(
+        deliver_func=deliver_func,
+        interval_minutes=config.get("interval_minutes", 10),
+        topic_pool=topics,
+    )
+    
+    logger.info("♥ Soul模块已创建并启用")
+    return soulbeat
 
 
-async def heartbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
+async def soulbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
     """
-    Heartbeat的推送函数 - 通过GatewayRunner向所有活跃session推送
+    SoulBeat的推送函数 - 通过GatewayRunner向所有活跃session推送
     
     这个函数是平台无关的，会通过DeliveryRouter自动路由到
     微信/QQ/Telegram/Slack等任何已连接的adapter。
     
     Args:
         gateway_runner: GatewayRunner实例
-        message: 要推送的心跳消息
+        message: 要推送的灵魂跳动消息
     
     Returns:
         是否推送成功
@@ -129,23 +129,23 @@ async def heartbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
                     ))
         
         if not targets:
-            logger.warning("♥ 没有可推送的目标，心跳消息跳过")
+            logger.warning("♥ 没有可推送的目标，灵魂跳动消息跳过")
             return False
         
         # 通过DeliveryRouter推送
         results = await gateway_runner.delivery_router.deliver(
             content=message,
             targets=targets,
-            job_name="openzuma-heart",
+            job_name="openzuma-soul",
         )
         
         success = any(r.get("success") for r in results.values())
         if success:
-            logger.info(f"♥ 心跳已推送到 {len(results)} 个目标")
+            logger.info(f"♥ 灵魂跳动已推送到 {len(results)} 个目标")
         else:
-            logger.warning(f"♥ 心跳推送全部失败: {results}")
+            logger.warning(f"♥ 灵魂跳动推送全部失败: {results}")
         return success
         
     except Exception as e:
-        logger.error(f"♥ 心跳推送异常: {e}")
+        logger.error(f"♥ 灵魂跳动推送异常: {e}")
         return False

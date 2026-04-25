@@ -572,6 +572,12 @@ class SessionStore:
         except Exception as e:
             print(f"[gateway] Warning: SQLite session store unavailable, falling back to JSONL: {e}")
     
+    @property
+    def sessions(self) -> Dict[str, "SessionEntry"]:
+        """Public read-only access to session entries (keyed by 'platform:chat_id[:thread_id]')."""
+        self._ensure_loaded()
+        return self._entries
+
     def _ensure_loaded(self) -> None:
         """Load sessions index from disk if not already loaded."""
         with self._lock:
