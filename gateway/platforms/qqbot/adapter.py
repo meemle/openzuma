@@ -570,6 +570,20 @@ class QQAdapter(BasePlatformAdapter):
             gateway_url = await self._get_gateway_url()
             await self._open_ws(gateway_url)
             self._mark_connected()
+
+            # Restart heartbeat loop so it immediately begins a fresh
+            # sleep cycle aligned with the new connection.  Without this
+            # the old loop may be mid-sleep from the previous session,
+            # causing the first heartbeat to arrive after the server's
+            # ~60 s timeout and triggering another disconnect.
+            if self._heartbeat_task and not self._heartbeat_task.done():
+                self._heartbeat_task.cancel()
+                try:
+                    await self._heartbeat_task
+                except asyncio.CancelledError:
+                    pass
+            self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+
             logger.info("[%s] Reconnected", self._log_tag)
             return True
         except Exception as exc:
