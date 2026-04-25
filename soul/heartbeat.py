@@ -1,9 +1,9 @@
 """
-Openzuma Heart - 心跳引擎
+Openzuma Soul - 灵魂心跳引擎
 定时主动发言，让openzuma有自主"心跳"
 
 设计原则：
-- Heart是gateway内置组件，通过GatewayRunner的DeliveryRouter推送
+- Soul是gateway内置组件，通过GatewayRunner的DeliveryRouter推送
 - 不绑定任何具体平台（微信/QQ/Telegram等），平台无关
 - 心跳间隔通过config.yaml配置，也可运行时动态调整
 - 话题库可扩展，用户可自定义
@@ -15,7 +15,7 @@ import logging
 from datetime import datetime
 from typing import Callable, Optional, List, Dict, Any
 
-logger = logging.getLogger("openzuma.heart")
+logger = logging.getLogger("openzuma.soul")
 
 
 # ====== 预设话题库 ======

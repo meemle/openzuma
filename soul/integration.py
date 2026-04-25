@@ -1,11 +1,11 @@
 """
-Openzuma Heart - Gateway集成
-将heart模块集成到GatewayRunner中，实现平台无关的心跳推送
+Openzuma Soul - Gateway集成
+将soul模块集成到GatewayRunner中，实现平台无关的心跳推送
 
 集成方式：
 1. GatewayRunner初始化时创建Heartbeat实例
 2. Heartbeat通过DeliveryRouter向所有活跃session推送
-3. 配置通过config.yaml的heart字段管理
+3. 配置通过config.yaml的soul字段管理
 """
 
 import logging
@@ -16,12 +16,12 @@ from .heartbeat import Heartbeat
 logger = logging.getLogger("openzuma.soul.integration")
 
 
-def load_heart_config(config: Dict[str, Any]) -> Dict[str, Any]:
+def load_soul_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """
-    从config.yaml加载heart配置
+    从config.yaml加载soul配置
     
     配置格式（config.yaml）:
-        heart:
+        soul:
           enabled: true
           interval_minutes: 10
           custom_topics:
@@ -31,11 +31,11 @@ def load_heart_config(config: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         dict with keys: enabled, interval_minutes, custom_topics
     """
-    heart_cfg = config.get("soul", {})
+    soul_cfg = config.get("soul", {})
     return {
-        "enabled": heart_cfg.get("enabled", False),
-        "interval_minutes": heart_cfg.get("interval_minutes", 10),
-        "custom_topics": heart_cfg.get("custom_topics", []),
+        "enabled": soul_cfg.get("enabled", False),
+        "interval_minutes": soul_cfg.get("interval_minutes", 10),
+        "custom_topics": soul_cfg.get("custom_topics", []),
     }
 
 
@@ -64,14 +64,14 @@ def create_heartbeat(
     if config.get("custom_topics"):
         topics = config["custom_topics"]
     
-    heart = Heartbeat(
-        deliver_func=deliver_func,
-        interval_minutes=config.get("interval_minutes", 10),
-        topic_pool=topics,
-    )
-    
-    logger.info("♥ Heart模块已创建并启用")
-    return heart
+        heart = Heartbeat(
+            deliver_func=deliver_func,
+            interval_minutes=config.get("interval_minutes", 10),
+            topic_pool=topics,
+        )
+        
+        logger.info("♥ Soul模块已创建并启用")
+        return heart
 
 
 async def heartbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
