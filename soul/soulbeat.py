@@ -1,162 +1,248 @@
 """
-Openzuma Soul - 灵魂跳动引擎
+Openzuma Soul - 灵魂跳动引擎 v2
 定时主动发言，让openzuma有自主"灵魂跳动"
 
-设计原则：
-- Soul是gateway内置组件，通过GatewayRunner的DeliveryRouter推送
-- 不绑定任何具体平台（微信/QQ/Telegram等），平台无关
-- 跳动间隔通过config.yaml配置，也可运行时动态调整
-- 话题库可扩展，用户可自定义
+v2 改造重点：
+- 废弃硬编码话题库，改用大模型实时生成话题
+- 结合实时财经数据（Sina Finance API）+ 当前时间/季节
+- 每次跳动生成全新内容，杜绝重复
+- 静默时段（23:00-07:00）不推送
+- 话题风格：投资专家视角，带信息增量，简洁不废话
 """
 
 import random
 import asyncio
 import logging
+import os
+import json
 from datetime import datetime
 from typing import Callable, Optional, List, Dict, Any
 
 logger = logging.getLogger("openzuma.soul")
 
-
-# ====== 预设话题库 ======
-TOPIC_POOL = [
-    # 知识分享
-    "💡 你知道吗？人一生中心脏大约会跳动25亿次。",
-    "💡 分享一个小知识：地球上的蚂蚁总重量和人类总重量大致相当。",
-    "💡 有趣的事实：章鱼有三颗心脏，两颗负责鳃，一颗负责全身供血。",
-    "💡 冷知识：蜂蜜永远不会变质，考古学家在埃及金字塔中发现了3000年前的蜂蜜，仍然可以食用。",
-    "💡 宇宙中的恒星数量比地球上所有沙滩的沙粒总数还多。",
-    "💡 光从太阳到达地球需要大约8分20秒，所以我们看到的阳光是8分钟前的。",
-    "💡 一朵云的平均重量是50万公斤，相当于100头大象。",
-    "💡 香蕉实际上是浆果，而草莓不是。",
-    "💡 人脑产生的电量足以点亮一个小灯泡。",
-    "💡 金星上的一天比金星上的一年还长。",
-    "💡 蜗牛可以睡3年不吃不喝，是世界上最能睡的动物。",
-    "💡 北极熊的皮肤其实是黑色的，毛发是透明的。",
-    "💡 人体血管的总长度可以绕地球两圈半。",
-    "💡 企鹅求婚时会送石头给心仪的对象。",
-    "💡 海马是唯一由雄性怀孕生子的动物。",
-
-    # 闲聊互动
-    "☕ 休息一下吧，站起来活动活动，喝杯水。",
-    "🎵 最近有没有听到什么好听的歌？",
-    "📖 有什么有趣的事情想聊聊吗？",
-    "😊 心情怎么样？有什么想说的随时告诉我。",
-    "🍵 别忘了喝水，保持好状态！",
-    "🏃 久坐不好，起来活动一下吧。",
-    "☕ 喝杯茶，发会儿呆，也是一种休息。",
-    "🌟 今天有什么值得开心的事情吗？",
-    "🎭 人生如戏，每一天都是新的剧本。今天你的角色是什么？",
-
-    # 实用提醒
-    "📊 需要我帮你看一下今天的股市动态吗？",
-    "🎣 要不要查一下最近的潮汐和海钓信息？",
-    "📰 要不要看看今天的新闻摘要？",
-
-    # 哲理/趣味
-    "🤔 如果你可以拥有一个超能力，你会选择什么？",
-    "🌊 像海浪一样，有起有落才是常态。保持节奏就好。",
-    "🍀 幸运不是偶然，而是每天一点一滴的积累。",
-    "🎵 音乐是心灵的语言，今天你的心灵在说什么？",
-]
-
-# 时段话题
-TIME_TOPICS = {
-    "morning": [
-        "🌅 早上好！新的一天开始了，今天也要元气满满！",
-        "🌅 早安！一日之计在于晨，今天有什么重要安排吗？",
-    ],
-    "noon": [
-        "☀️ 中午好！该吃午饭了，别饿着肚子工作。",
-        "☀️ 午安！午饭后小憩一会儿，下午更有精神。",
-    ],
-    "evening": [
-        "🌆 晚上好！忙碌了一天，放松一下吧。",
-        "🌆 傍晚了，今天过得怎么样？",
-    ],
-    "night": [
-        "🌙 夜深了，该准备休息了。明天又是美好的一天。",
-        "🌙 这么晚了还没睡？注意身体哦。",
-    ],
-}
+# ====== 静默时段配置 ======
+SILENT_HOUR_START = 23  # 23:00开始静默
+SILENT_HOUR_END = 7     # 07:00结束静默
 
 
-def _get_time_period() -> str:
-    """获取当前时段"""
+def _is_silent_hours() -> bool:
+    """判断当前是否在静默时段"""
     hour = datetime.now().hour
-    if 6 <= hour < 9:
-        return "morning"
-    elif 11 <= hour < 13:
-        return "noon"
-    elif 17 <= hour < 20:
-        return "evening"
-    elif 22 <= hour or hour < 2:
-        return "night"
-    return ""
+    if SILENT_HOUR_START <= hour or hour < SILENT_HOUR_END:
+        return True
+    return False
+
+
+def _fetch_market_snapshot() -> str:
+    """从Sina Finance API获取实时市场快照，作为话题生成的素材"""
+    try:
+        import requests
+        headers = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://finance.sina.com.cn'}
+        
+        codes = {
+            '上证指数': 'sh000001',
+            '深证成指': 'sz399001',
+            '创业板': 'sz399006',
+            '恒生指数': 'rt_hsi',
+            '道琼斯': 'gb_dji',
+            '纳斯达克': 'gb_ixic',
+            '黄金': 'hf_GC',
+            '原油': 'hf_CL',
+        }
+        
+        code_str = ','.join(codes.values())
+        r = requests.get(f'https://hq.sinajs.cn/list={code_str}', headers=headers, timeout=8)
+        
+        lines = r.text.strip().split('\n')
+        snapshot_parts = []
+        for line in lines:
+            line = line.strip()
+            if not line or '=' not in line:
+                continue
+            try:
+                code_part = line.split('=')[0].split('_')[-1]
+                data = line.split('"')[1]
+                if not data:
+                    continue
+                fields = data.split(',')
+                
+                # 找到对应名称
+                name = None
+                for n, c in codes.items():
+                    if c == code_part:
+                        name = n
+                        break
+                if not name:
+                    continue
+                
+                # 不同品种解析方式不同
+                if code_part.startswith('hf_'):
+                    # 国际期货: field[0]=现价, field[3]=昨结算
+                    price = float(fields[0])
+                    prev = float(fields[3]) if fields[3] else price
+                    change_pct = ((price - prev) / prev) * 100 if prev else 0
+                    snapshot_parts.append(f"{name}: {price} ({change_pct:+.2f}%)")
+                elif code_part.startswith(('gb_', 'rt_')):
+                    # 港美股: field[1]=现价, field[3]=昨收
+                    price = float(fields[1])
+                    prev = float(fields[3]) if fields[3] else price
+                    change_pct = ((price - prev) / prev) * 100 if prev else 0
+                    snapshot_parts.append(f"{name}: {price} ({change_pct:+.2f}%)")
+                else:
+                    # A股指数: field[1]=现价, field[2]=昨收
+                    price = float(fields[1])
+                    prev = float(fields[2]) if fields[2] else price
+                    change_pct = ((price - prev) / prev) * 100 if prev else 0
+                    snapshot_parts.append(f"{name}: {price:.2f} ({change_pct:+.2f}%)")
+            except (IndexError, ValueError):
+                continue
+        
+        return '；'.join(snapshot_parts) if snapshot_parts else "市场数据暂不可用"
+    except Exception as e:
+        logger.debug(f"获取市场快照失败: {e}")
+        return "市场数据暂不可用"
+
+
+def _generate_topic_via_llm(market_snapshot: str) -> Optional[str]:
+    """调用本地大模型生成一个有深度的话题"""
+    try:
+        from openai import OpenAI
+        
+        # 读取配置获取API信息
+        config_path = os.path.expanduser("~/.openzuma/config.yaml")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+        model = os.environ.get("SOUL_MODEL", "google/gemini-2.0-flash-001")
+        
+        # 尝试从config.yaml读取（优先soul段，其次model段）
+        try:
+            import yaml
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                # 先读soul专属配置
+                soul_cfg = cfg.get("soul", {})
+                # 再读model段配置作为兜底
+                model_cfg = cfg.get("model", {})
+                model = soul_cfg.get("model", model_cfg.get("default", model))
+                api_key = soul_cfg.get("api_key") or model_cfg.get("api_key") or api_key
+                base_url = soul_cfg.get("base_url") or model_cfg.get("base_url") or base_url
+        except Exception:
+            pass
+        
+        if not api_key:
+            logger.warning("♥ SoulBeat: 无API key，无法调用大模型生成话题")
+            return None
+        
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        
+        now = datetime.now()
+        time_desc = f"现在是{now.year}年{now.month}月{now.day}日 {now.hour}:{now.minute:02d}，{['周一','周二','周三','周四','周五','周六','周日'][now.weekday()]}"
+        
+        prompt = f"""你是"祖马"，一个投资专家AI助手，正在给用户"三大爷"主动推送一条有价值的消息。
+
+{time_desc}
+
+当前市场快照：
+{market_snapshot}
+
+要求：
+1. 基于上面的实时数据，给出你的个人投资判断或发现一个值得关注的市场信号
+2. 也可以结合当前国际热点（地缘政治、央行政策、科技突破等）输出观点
+3. 绝对不要说废话、套话、心灵鸡汤
+4. 要有信息增量，让人看了想继续聊
+5. 控制在2-3句话以内，简洁有力
+6. 不要用emoji开头
+7. 绝对不要重复之前说过的话题
+
+直接输出内容，不要加任何前缀或标签。"""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.9,
+        )
+        
+        topic = response.choices[0].message.content.strip()
+        return topic if topic else None
+        
+    except Exception as e:
+        logger.error(f"♥ LLM话题生成失败: {e}")
+        return None
 
 
 class SoulBeat:
     """
-    openzuma的灵魂跳动 - 定时主动发言引擎
+    openzuma的灵魂跳动 v2 - 大模型驱动的实时话题生成
     
-    作为GatewayRunner的内置组件运行，通过DeliveryRouter
-    向所有已连接的平台推送灵魂跳动消息。
-    
-    用法（在GatewayRunner中）:
-        soulbeat = SoulBeat(deliver_func=gateway_runner.soulbeat_deliver)
-        soulbeat.start()  # 启动灵魂跳动循环
-    
-    配置（config.yaml）:
-        soul:
-          enabled: true
-          interval_minutes: 10
-          custom_topics: []
+    改造点：
+    - 不再用硬编码话题库
+    - 每次跳动调用大模型+实时市场数据生成全新话题
+    - 静默时段(23:00-07:00)自动跳过
+    - 记录历史话题避免重复
     """
 
     def __init__(
         self,
         deliver_func: Optional[Callable] = None,
-        interval_minutes: int = 10,
-        topic_pool: Optional[List[str]] = None,
+        interval_minutes: int = 30,
+        topic_pool: Optional[List[str]] = None,  # v2中保留参数但不再使用
     ):
-        """
-        Args:
-            deliver_func: 异步发送函数，签名为 async def deliver(msg: str) -> bool
-                          由GatewayRunner注入，内部调用DeliveryRouter
-            interval_minutes: 灵魂跳动间隔（分钟），默认10分钟
-            topic_pool: 自定义话题库，为None则使用默认话题库
-        """
         self.deliver_func = deliver_func
         self.interval_minutes = interval_minutes
-        self.topic_pool = topic_pool or TOPIC_POOL.copy()
+        # v2: 话题历史记录，用于防重复
+        self._topic_history: List[str] = []
+        self._max_history = 50  # 保留最近50条话题历史
         self._task: Optional[asyncio.Task] = None
         self._running = False
-        self._last_topic: Optional[str] = None
         self._beat_count = 0
-        logger.info(f"♥ SoulBeat 初始化: 间隔={interval_minutes}分钟, 话题库={len(self.topic_pool)}条")
+        logger.info(f"♥ SoulBeat v2 初始化: 间隔={interval_minutes}分钟, 大模型实时生成模式")
 
-    def _pick_topic(self) -> str:
-        """随机挑选话题，避免连续重复，加入时段话题"""
-        candidates = self.topic_pool.copy()
+    def _pick_topic(self) -> Optional[str]:
+        """v2: 通过大模型+实时数据生成话题"""
+        # 检查静默时段
+        if _is_silent_hours():
+            logger.info("♥ 静默时段(23:00-07:00)，跳过本次跳动")
+            return None
         
-        # 30%概率使用时段话题
-        period = _get_time_period()
-        if period and period in TIME_TOPICS and random.random() < 0.3:
-            candidates.extend(TIME_TOPICS[period])
+        # 获取市场快照
+        market_snapshot = _fetch_market_snapshot()
+        logger.info(f"♥ 市场快照: {market_snapshot[:80]}...")
         
-        # 避免连续重复
-        if self._last_topic and len(candidates) > 1:
-            candidates = [t for t in candidates if t != self._last_topic]
+        # 调用大模型生成话题
+        topic = _generate_topic_via_llm(market_snapshot)
         
-        topic = random.choice(candidates)
-        self._last_topic = topic
+        if not topic:
+            # LLM失败时，用市场数据拼一条简报
+            if market_snapshot and market_snapshot != "市场数据暂不可用":
+                topic = f"📊 市场速递：{market_snapshot}"
+            else:
+                logger.warning("♥ 话题生成失败且无市场数据，跳过本次跳动")
+                return None
+        
+        # 检查是否与历史重复
+        if topic in self._topic_history:
+            logger.info("♥ 话题与历史重复，跳过本次跳动")
+            return None
+        
+        # 记录到历史
+        self._topic_history.append(topic)
+        if len(self._topic_history) > self._max_history:
+            self._topic_history = self._topic_history[-self._max_history:]
+        
         return topic
 
-    async def beat(self) -> str:
+    async def beat(self) -> Optional[str]:
         """跳动一次 - 生成话题并推送"""
         self._beat_count += 1
         topic = self._pick_topic()
-        logger.info(f"♥ 第{self._beat_count}次灵魂跳动: {topic[:30]}...")
+        
+        if not topic:
+            logger.info(f"♥ 第{self._beat_count}次灵魂跳动: 无话题生成，跳过")
+            return None
+        
+        logger.info(f"♥ 第{self._beat_count}次灵魂跳动: {topic[:50]}...")
 
         if self.deliver_func:
             try:
@@ -177,10 +263,22 @@ class SoulBeat:
             except Exception as e:
                 logger.error(f"♥ 灵魂跳动执行异常: {e}")
 
-            # 等待间隔，加入±20%随机抖动避免太机械
+            # 等待间隔，加入±20%随机抖动
             base_seconds = self.interval_minutes * 60
             jitter = random.uniform(-0.2, 0.2) * base_seconds
             wait_seconds = base_seconds + jitter
+            
+            # 如果等待后会在静默时段内醒来，延长到静默结束
+            from datetime import timedelta
+            wake_time = datetime.now() + timedelta(seconds=wait_seconds)
+            if SILENT_HOUR_START <= wake_time.hour or wake_time.hour < SILENT_HOUR_END:
+                # 计算到早上7点的秒数
+                target = wake_time.replace(hour=SILENT_HOUR_END, minute=0, second=0, microsecond=0)
+                if target <= wake_time:
+                    target = target + timedelta(days=1)
+                wait_seconds = (target - datetime.now()).total_seconds() + random.uniform(0, 300)
+                logger.info(f"♥ 下一次跳动调整到静默时段结束后: {wait_seconds:.0f}秒后")
+
             logger.info(f"♥ 下一次灵魂跳动: {wait_seconds:.0f}秒后")
 
             # 分段等待，以便能及时响应stop()
@@ -191,13 +289,13 @@ class SoulBeat:
                 elapsed += chunk
 
     def start(self):
-        """启动灵魂跳动（异步，需在event loop中调用）"""
+        """启动灵魂跳动"""
         if self._running:
             logger.warning("♥ 灵魂跳动已在运行中")
             return
         self._running = True
         self._task = asyncio.ensure_future(self._soulbeat_loop())
-        logger.info(f"♥♥♥ 灵魂跳动启动！每{self.interval_minutes}分钟跳动一次 ♥♥♥")
+        logger.info(f"♥♥♥ 灵魂跳动v2启动！每{self.interval_minutes}分钟生成一次话题 ♥♥♥")
 
     def stop(self):
         """停止灵魂跳动"""
@@ -208,32 +306,30 @@ class SoulBeat:
         logger.info("♥ 灵魂跳动已停止")
 
     def set_interval(self, minutes: int):
-        """动态调整跳动间隔（下次跳动生效）"""
+        """动态调整跳动间隔"""
         self.interval_minutes = minutes
         logger.info(f"♥ 灵魂跳动间隔已调整为 {minutes}分钟")
 
     def add_topic(self, topic: str):
-        """添加自定义话题"""
-        self.topic_pool.append(topic)
-        logger.info(f"♥ 新话题已添加，话题库: {len(self.topic_pool)}条")
+        """v2保留兼容接口，实际不再需要"""
+        logger.info("♥ v2模式: 话题由大模型实时生成，add_topic已弃用")
 
     def remove_topic(self, topic: str):
-        """移除话题"""
-        if topic in self.topic_pool:
-            self.topic_pool.remove(topic)
-            logger.info(f"♥ 话题已移除，话题库: {len(self.topic_pool)}条")
+        """v2保留兼容接口"""
+        pass
 
     @property
     def status(self) -> Dict[str, Any]:
         """获取灵魂跳动状态"""
         return {
             "running": self._running,
+            "version": "v2-llm-driven",
             "interval_minutes": self.interval_minutes,
             "beat_count": self._beat_count,
-            "topic_pool_size": len(self.topic_pool),
-            "last_topic": self._last_topic,
+            "topic_history_size": len(self._topic_history),
+            "last_topic": self._topic_history[-1] if self._topic_history else None,
         }
 
     def __repr__(self):
         state = "跳动中" if self._running else "静止"
-        return f"<SoulBeat {state} 间隔={self.interval_minutes}min 跳动={self._beat_count}次>"
+        return f"<SoulBeat-v2 {state} 间隔={self.interval_minutes}min 跳动={self._beat_count}次>"

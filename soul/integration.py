@@ -1,11 +1,11 @@
 """
-Openzuma Soul - Gateway集成
-将soul模块集成到GatewayRunner中，实现平台无关的灵魂跳动推送
+Openzuma Soul - Gateway集成 v2
+将soul模块集成到GatewayRunner中，大模型驱动的话题生成
 
-集成方式：
-1. GatewayRunner初始化时创建SoulBeat实例
-2. SoulBeat通过DeliveryRouter向所有活跃session推送
-3. 配置通过config.yaml的soul字段管理
+v2 改造：
+- 话题不再从预设库抽取，而是大模型实时生成
+- 配置新增: model, base_url, api_key（用于话题生成LLM）
+- 静默时段(23:00-07:00)内置在soulbeat.py中
 """
 
 import logging
@@ -20,23 +20,37 @@ def load_soul_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     从config.yaml加载soul配置
     
-    配置格式（config.yaml）:
+    v2 配置格式:
         soul:
           enabled: true
-          interval_minutes: 10
-          custom_topics:
-            - "🎯 自定义话题1"
-            - "💡 自定义话题2"
-    
-    Returns:
-        dict with keys: enabled, interval_minutes, custom_topics
+          interval_minutes: 30
+          model: google/gemini-2.0-flash-001    # 话题生成用的模型
+          base_url: https://openrouter.ai/api/v1  # 可选，覆盖默认
+          api_key: sk-xxx                        # 可选，覆盖环境变量
+          custom_topics: []                       # v2中弃用，保留兼容
     """
     soul_cfg = config.get("soul", {})
-    return {
+    result = {
         "enabled": soul_cfg.get("enabled", False),
-        "interval_minutes": soul_cfg.get("interval_minutes", 10),
+        "interval_minutes": soul_cfg.get("interval_minutes", 30),
+        "model": soul_cfg.get("model", ""),
+        "base_url": soul_cfg.get("base_url", ""),
+        "api_key": soul_cfg.get("api_key", ""),
         "custom_topics": soul_cfg.get("custom_topics", []),
     }
+    
+    # v2: 如果配置了model，设置环境变量供soulbeat使用
+    if result["model"]:
+        import os
+        os.environ["SOUL_MODEL"] = result["model"]
+    if result["base_url"]:
+        import os
+        os.environ["SOUL_BASE_URL"] = result["base_url"]
+    if result["api_key"]:
+        import os
+        os.environ["SOUL_API_KEY"] = result["api_key"]
+    
+    return result
 
 
 def create_soulbeat(
@@ -44,62 +58,38 @@ def create_soulbeat(
     config: Optional[Dict[str, Any]] = None,
 ) -> Optional[SoulBeat]:
     """
-    根据配置创建SoulBeat实例
-    
-    Args:
-        deliver_func: 异步推送函数，由GatewayRunner注入
-        config: soul配置字典（来自load_soul_config）
-    
-    Returns:
-        SoulBeat实例，如果未启用则返回None
+    根据配置创建SoulBeat v2实例
     """
     if config is None:
-        config = {"enabled": False, "interval_minutes": 10, "custom_topics": []}
+        config = {"enabled": False, "interval_minutes": 30}
     
     if not config.get("enabled", False):
         logger.info("♥ Soul模块未启用（soul.enabled未设为true）")
         return None
     
-    topics = None
-    if config.get("custom_topics"):
-        topics = config["custom_topics"]
-    
     soulbeat = SoulBeat(
         deliver_func=deliver_func,
-        interval_minutes=config.get("interval_minutes", 10),
-        topic_pool=topics,
+        interval_minutes=config.get("interval_minutes", 30),
     )
     
-    logger.info("♥ Soul模块已创建并启用")
+    logger.info("♥ SoulBeat v2 模块已创建（大模型实时话题生成模式）")
     return soulbeat
 
 
 async def soulbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
     """
     SoulBeat的推送函数 - 通过GatewayRunner向所有活跃session推送
-    
-    这个函数是平台无关的，会通过DeliveryRouter自动路由到
-    微信/QQ/Telegram/Slack等任何已连接的adapter。
-    
-    Args:
-        gateway_runner: GatewayRunner实例
-        message: 要推送的灵魂跳动消息
-    
-    Returns:
-        是否推送成功
+    （保持不变，平台无关）
     """
     from gateway.delivery import DeliveryTarget
     from gateway.platforms.base import Platform
     
     try:
-        # 收集所有活跃平台的session
         targets = []
         
-        # 从session_store获取所有活跃session
         if hasattr(gateway_runner, 'session_store'):
             sessions = gateway_runner.session_store.list_sessions()
             for session_key in sessions:
-                # 解析session_key格式: platform:chat_id[:thread_id]
                 parts = session_key.split(":")
                 if len(parts) >= 2:
                     platform_str = parts[0]
@@ -116,10 +106,8 @@ async def soulbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
                     except ValueError:
                         logger.warning(f"♥ 无法识别平台: {platform_str}")
         
-        # 如果没有活跃session，尝试向所有已连接adapter的默认chat推送
         if not targets and hasattr(gateway_runner, 'adapters'):
             for platform, adapter in gateway_runner.adapters.items():
-                # 获取adapter的默认/主chat_id
                 default_chat = getattr(adapter, 'default_chat_id', None) or \
                               getattr(adapter, 'home_chat_id', None)
                 if default_chat:
@@ -132,7 +120,6 @@ async def soulbeat_deliver_via_gateway(gateway_runner, message: str) -> bool:
             logger.warning("♥ 没有可推送的目标，灵魂跳动消息跳过")
             return False
         
-        # 通过DeliveryRouter推送
         results = await gateway_runner.delivery_router.deliver(
             content=message,
             targets=targets,
