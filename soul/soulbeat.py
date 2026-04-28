@@ -33,6 +33,72 @@ def _is_silent_hours() -> bool:
     return False
 
 
+def _fetch_survey_data() -> str:
+    """从东方财富API获取最近一个工作日的上市公司调研汇总，作为话题生成素材"""
+    try:
+        import requests
+        from datetime import timedelta
+
+        today = datetime.now()
+        weekday = today.weekday()
+        if weekday >= 5:  # 周末回退到周五
+            offset = weekday - 4
+            latest_workday = (today - timedelta(days=offset)).strftime('%Y-%m-%d')
+        else:
+            latest_workday = today.strftime('%Y-%m-%d')
+
+        url = 'https://datacenter-web.eastmoney.com/api/data/v1/get'
+        headers = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://data.eastmoney.com/'}
+        companies = {}
+
+        for page in range(1, 20):  # 最多翻20页
+            params = {
+                'sortColumns': 'NOTICE_DATE',
+                'sortTypes': -1,
+                'pageSize': 50,
+                'pageNumber': page,
+                'reportName': 'RPT_ORG_SURVEY',
+                'columns': 'SECURITY_NAME_ABBR,SECURITY_CODE,NOTICE_DATE,RECEIVE_START_DATE,RECEIVE_WAY_EXPLAIN,RECEIVE_OBJECT',
+                'filter': f"(NOTICE_DATE>='{latest_workday}')",
+            }
+            try:
+                r = requests.get(url, params=params, headers=headers, timeout=10)
+                data = r.json()
+                items = data.get('result', {}).get('data', [])
+                if not items:
+                    break
+                for item in items:
+                    name = item['SECURITY_NAME_ABBR']
+                    if name not in companies:
+                        companies[name] = {
+                            'code': item['SECURITY_CODE'],
+                            'survey_date': item['RECEIVE_START_DATE'][:10],
+                            'org_count': 0,
+                            'ways': set(),
+                        }
+                    companies[name]['org_count'] += 1
+                    way = item.get('RECEIVE_WAY_EXPLAIN', '')
+                    if way:
+                        companies[name]['ways'].add(way)
+            except Exception:
+                break
+
+        if not companies:
+            return ""
+
+        # 按机构数排序，取Top15
+        sorted_cos = sorted(companies.items(), key=lambda x: x[1]['org_count'], reverse=True)[:15]
+        parts = [f"截至{latest_workday}，共{len(companies)}家上市公司被机构调研，热门标的："]
+        for name, info in sorted_cos:
+            ways = ' '.join(info['ways'])
+            parts.append(f"  {name}({info['code']}): {info['org_count']}家机构，方式:{ways}，调研日:{info['survey_date']}")
+
+        return '\n'.join(parts)
+    except Exception as e:
+        logger.debug(f"获取调研数据失败: {e}")
+        return ""
+
+
 def _fetch_market_snapshot() -> str:
     """从Sina Finance API获取实时市场快照，作为话题生成的素材"""
     try:
@@ -103,7 +169,7 @@ def _fetch_market_snapshot() -> str:
         return "市场数据暂不可用"
 
 
-def _generate_topic_via_llm(market_snapshot: str) -> Optional[str]:
+def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "") -> Optional[str]:
     """调用本地大模型生成一个有深度的话题"""
     try:
         from openai import OpenAI
@@ -139,21 +205,30 @@ def _generate_topic_via_llm(market_snapshot: str) -> Optional[str]:
         now = datetime.now()
         time_desc = f"现在是{now.year}年{now.month}月{now.day}日 {now.hour}:{now.minute:02d}，{['周一','周二','周三','周四','周五','周六','周日'][now.weekday()]}"
         
+        # 构建调研数据段落（有数据才加）
+        survey_section = ""
+        if survey_data:
+            survey_section = f"""
+最近工作日机构调研动态：
+{survey_data}
+"""
+
         prompt = f"""你是"祖马"，一个投资专家AI助手，正在给用户"三大爷"主动推送一条有价值的消息。
 
 {time_desc}
 
 当前市场快照：
 {market_snapshot}
-
+{survey_section}
 要求：
-1. 基于上面的实时数据，给出你的个人投资判断或发现一个值得关注的市场信号
-2. 也可以结合当前国际热点（地缘政治、央行政策、科技突破等）输出观点
-3. 绝对不要说废话、套话、心灵鸡汤
-4. 要有信息增量，让人看了想继续聊
-5. 控制在2-3句话以内，简洁有力
-6. 不要用emoji开头
-7. 绝对不要重复之前说过的话题
+1. 基于上面的实时数据（市场行情+机构调研动态），给出你的个人投资判断或发现一个值得关注的市场信号
+2. 机构调研数据是重要情报——哪些公司被大量机构扎堆调研往往预示着市场关注方向，可以据此分析机构偏好和行业轮动趋势
+3. 也可以结合当前国际热点（地缘政治、央行政策、科技突破等）输出观点
+4. 绝对不要说废话、套话、心灵鸡汤
+5. 要有信息增量，让人看了想继续聊
+6. 控制在2-3句话以内，简洁有力
+7. 不要用emoji开头
+8. 绝对不要重复之前说过的话题
 
 直接输出内容，不要加任何前缀或标签。"""
 
@@ -210,8 +285,13 @@ class SoulBeat:
         market_snapshot = _fetch_market_snapshot()
         logger.info(f"♥ 市场快照: {market_snapshot[:80]}...")
         
+        # 获取机构调研数据
+        survey_data = _fetch_survey_data()
+        if survey_data:
+            logger.info(f"♥ 调研数据: {survey_data[:80]}...")
+        
         # 调用大模型生成话题
-        topic = _generate_topic_via_llm(market_snapshot)
+        topic = _generate_topic_via_llm(market_snapshot, survey_data)
         
         if not topic:
             # LLM失败时，用市场数据拼一条简报
