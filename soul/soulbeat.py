@@ -356,7 +356,9 @@ class SoulBeat:
     async def beat(self) -> Optional[str]:
         """跳动一次 - 生成话题并推送"""
         self._beat_count += 1
-        topic = self._pick_topic()
+        # _pick_topic含同步阻塞I/O（requests + LLM调用），放到executor避免卡住事件循环
+        loop = asyncio.get_event_loop()
+        topic = await loop.run_in_executor(None, self._pick_topic)
         
         if not topic:
             logger.info(f"♥ 第{self._beat_count}次灵魂跳动: 无话题生成，跳过")
@@ -377,9 +379,13 @@ class SoulBeat:
 
     async def _soulbeat_loop(self):
         """灵魂跳动循环（异步）"""
+        from datetime import timedelta
         while self._running:
             try:
                 await self.beat()
+            except asyncio.CancelledError:
+                logger.info("♥ 灵魂跳动任务被取消")
+                return
             except Exception as e:
                 logger.error(f"♥ 灵魂跳动执行异常: {e}")
 
@@ -389,7 +395,6 @@ class SoulBeat:
             wait_seconds = base_seconds + jitter
             
             # 如果等待后会在静默时段内醒来，延长到静默结束
-            from datetime import timedelta
             wake_time = datetime.now() + timedelta(seconds=wait_seconds)
             if SILENT_HOUR_START <= wake_time.hour or wake_time.hour < SILENT_HOUR_END:
                 # 计算到早上7点的秒数
@@ -405,7 +410,11 @@ class SoulBeat:
             elapsed = 0
             while elapsed < wait_seconds and self._running:
                 chunk = min(10, wait_seconds - elapsed)
-                await asyncio.sleep(chunk)
+                try:
+                    await asyncio.sleep(chunk)
+                except asyncio.CancelledError:
+                    logger.info("♥ 灵魂跳动等待被取消")
+                    return
                 elapsed += chunk
 
     def start(self):
@@ -415,6 +424,17 @@ class SoulBeat:
             return
         self._running = True
         self._task = asyncio.ensure_future(self._soulbeat_loop())
+        # 添加完成回调，检测task是否异常退出
+        def _on_task_done(task):
+            if task.cancelled():
+                logger.warning("♥ SoulBeat task被取消退出")
+            elif task.exception():
+                logger.error(f"♥ SoulBeat task异常退出: {task.exception()}")
+            elif self._running:
+                logger.error("♥ SoulBeat task意外结束，但_running仍为True，尝试重启")
+                self._running = False
+                self.start()
+        self._task.add_done_callback(_on_task_done)
         logger.info(f"♥♥♥ 灵魂跳动v2启动！每{self.interval_minutes}分钟生成一次话题 ♥♥♥")
 
     def stop(self):

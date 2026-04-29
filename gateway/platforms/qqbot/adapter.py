@@ -535,6 +535,12 @@ class QQAdapter(BasePlatformAdapter):
                     quick_disconnect_count = 0
                 else:
                     backoff_idx += 1
+                    if backoff_idx >= MAX_RECONNECT_ATTEMPTS:
+                        logger.error(
+                            "[%s] Max reconnect attempts reached (QQCloseError)",
+                            self._log_tag,
+                        )
+                        return
 
             except Exception as exc:
                 if not self._running:
@@ -619,12 +625,14 @@ class QQAdapter(BasePlatformAdapter):
             while self._running:
                 await asyncio.sleep(self._heartbeat_interval)
                 if not self._ws or self._ws.closed:
+                    logger.warning("[%s] Heartbeat skip: WS closed (interval=%.1fs)", self._log_tag, self._heartbeat_interval)
                     continue
                 try:
                     # d should be the latest sequence number received, or null
                     await self._ws.send_json({"op": 1, "d": self._last_seq})
+                    logger.info("[%s] Heartbeat sent (seq=%s, interval=%.1fs)", self._log_tag, self._last_seq, self._heartbeat_interval)
                 except Exception as exc:
-                    logger.debug("[%s] Heartbeat failed: %s", self._log_tag, exc)
+                    logger.warning("[%s] Heartbeat failed: %s", self._log_tag, exc)
         except asyncio.CancelledError:
             pass
 

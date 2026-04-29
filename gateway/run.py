@@ -2699,6 +2699,20 @@ class GatewayRunner:
 
             self._finalize_shutdown_agents(active_agents)
 
+            # Kill tool subprocesses eagerly (before adapter disconnect) so
+            # that drain-timeout + interrupt-grace doesn't leave bash/sleep
+            # children alive until the global cleanup at the end.  On
+            # Termux/MIUI the OS may SIGKILL the gateway cgroup before we
+            # reach the catch-all kill_all() — same problem systemd has.
+            # Keep the catch-all at the end for defense-in-depth.
+            if timed_out:
+                try:
+                    from tools.process_registry import process_registry
+                    process_registry.kill_all()
+                    logger.info("Killed tool subprocesses after drain timeout (before adapter disconnect)")
+                except Exception as e:
+                    logger.debug("Eager kill_all() failed: %s", e)
+
             for platform, adapter in list(self.adapters.items()):
                 try:
                     await adapter.cancel_background_tasks()
@@ -10375,9 +10389,9 @@ class GatewayRunner:
         # Periodic "still working" notifications for long-running tasks.
         # Fires every N seconds so the user knows the agent hasn't died.
         # Config: agent.gateway_notify_interval in config.yaml, or
-        # OPENZUMA_AGENT_NOTIFY_INTERVAL env var.  Default 600s (10 min).
+        # OPENZUMA_AGENT_NOTIFY_INTERVAL env var.  Default 180s (3 min).
         # 0 = disable notifications.
-        _NOTIFY_INTERVAL_RAW = float(os.getenv("OPENZUMA_AGENT_NOTIFY_INTERVAL", 600))
+        _NOTIFY_INTERVAL_RAW = float(os.getenv("OPENZUMA_AGENT_NOTIFY_INTERVAL", 180))
         _NOTIFY_INTERVAL = _NOTIFY_INTERVAL_RAW if _NOTIFY_INTERVAL_RAW > 0 else None
         _notify_start = time.time()
 
