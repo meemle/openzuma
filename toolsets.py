@@ -377,12 +377,6 @@ TOOLSETS = {
         "includes": []
     },
 
-    "openzuma-qqbot": {
-        "description": "QQBot toolset - QQ messaging via Official Bot API v2 (full access)",
-        "tools": _OPENZUMA_CORE_TOOLS,
-        "includes": []
-    },
-
     "openzuma-wecom": {
         "description": "WeCom bot toolset - enterprise WeChat messaging (full access)",
         "tools": _OPENZUMA_CORE_TOOLS,
@@ -410,7 +404,7 @@ TOOLSETS = {
     "openzuma-gateway": {
         "description": "Gateway toolset - union of all messaging platform tools",
         "tools": [],
-        "includes": ["openzuma-telegram", "openzuma-discord", "openzuma-whatsapp", "openzuma-slack", "openzuma-signal", "openzuma-bluebubbles", "openzuma-homeassistant", "openzuma-email", "openzuma-sms", "openzuma-mattermost", "openzuma-matrix", "openzuma-dingtalk", "openzuma-feishu", "openzuma-wecom", "openzuma-wecom-callback", "openzuma-weixin", "openzuma-qqbot", "openzuma-webhook"]
+        "includes": ["openzuma-telegram", "openzuma-discord", "openzuma-whatsapp", "openzuma-slack", "openzuma-signal", "openzuma-bluebubbles", "openzuma-homeassistant", "openzuma-email", "openzuma-sms", "openzuma-mattermost", "openzuma-matrix", "openzuma-dingtalk", "openzuma-feishu", "openzuma-wecom", "openzuma-wecom-callback", "openzuma-weixin", "openzuma-webhook"]
     }
 }
 

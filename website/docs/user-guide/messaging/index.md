@@ -372,7 +372,6 @@ Each platform has its own toolset:
 | WeCom Callback | `openzuma-wecom-callback` | Full tools including terminal |
 | Weixin | `openzuma-weixin` | Full tools including terminal |
 | BlueBubbles | `openzuma-bluebubbles` | Full tools including terminal |
-| QQBot | `openzuma-qqbot` | Full tools including terminal |
 | API Server | `openzuma` (default) | Full tools including terminal |
 | Webhooks | `openzuma-webhook` | Full tools including terminal |
 
@@ -394,6 +393,5 @@ Each platform has its own toolset:
 - [WeCom Callback Setup](wecom-callback.md)
 - [Weixin Setup (WeChat)](weixin.md)
 - [BlueBubbles Setup (iMessage)](bluebubbles.md)
-- [QQBot Setup](qqbot.md)
 - [Open WebUI + API Server](open-webui.md)
 - [Webhooks](webhooks.md)

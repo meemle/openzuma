@@ -176,10 +176,7 @@ class SessionContext:
 
 
 _PII_SAFE_PLATFORMS = frozenset({
-    Platform.WHATSAPP,
-    Platform.SIGNAL,
-    Platform.TELEGRAM,
-    Platform.BLUEBUBBLES,
+    Platform.WEIXIN,
 })
 """Platforms where user IDs can be safely redacted (no in-message mention system
 that requires raw IDs).  Discord is excluded because mentions use ``<@user_id>``
@@ -263,24 +260,6 @@ def build_session_context_prompt(
         lines.append(f"**User ID:** {uid}")
     
     # Platform-specific behavioral notes
-    if context.source.platform == Platform.SLACK:
-        lines.append("")
-        lines.append(
-            "**Platform notes:** You are running inside Slack. "
-            "You do NOT have access to Slack-specific APIs — you cannot search "
-            "channel history, pin/unpin messages, manage channels, or list users. "
-            "Do not promise to perform these actions. If the user asks, explain "
-            "that you can only read messages sent directly to you and respond."
-        )
-    elif context.source.platform == Platform.DISCORD:
-        lines.append("")
-        lines.append(
-            "**Platform notes:** You are running inside Discord. "
-            "You do NOT have access to Discord-specific APIs — you cannot search "
-            "channel history, pin messages, manage roles, or list server members. "
-            "Do not promise to perform these actions. If the user asks, explain "
-            "that you can only read messages sent directly to you and respond."
-        )
 
     # Connected platforms
     platforms_list = ["local (files on this machine)"]

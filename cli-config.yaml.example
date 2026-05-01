@@ -549,7 +549,7 @@ agent:
 #   - A preset like "openzuma-cli" or "openzuma-telegram" (curated tool set)
 #   - A list of individual toolsets to compose your own (see list below)
 #
-# Supported platform keys: cli, telegram, discord, whatsapp, slack, qqbot
+# Supported platform keys: cli, telegram, discord, whatsapp, slack
 #
 # Examples:
 #
@@ -578,7 +578,6 @@ agent:
 #   slack:         openzuma-slack          (same as telegram)
 #   signal:        openzuma-signal         (same as telegram)
 #   homeassistant: openzuma-homeassistant  (same as telegram)
-#   qqbot:            openzuma-qqbot            (same as telegram)
 #
 platform_toolsets:
   cli: [openzuma-cli]
@@ -588,7 +587,6 @@ platform_toolsets:
   slack: [openzuma-slack]
   signal: [openzuma-signal]
   homeassistant: [openzuma-homeassistant]
-  qqbot: [openzuma-qqbot]
 
 # =============================================================================
 # Gateway Platform Settings

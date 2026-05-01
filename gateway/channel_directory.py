@@ -69,10 +69,8 @@ def build_channel_directory(adapters: Dict[Any, Any]) -> Dict[str, Any]:
 
     for platform, adapter in adapters.items():
         try:
-            if platform == Platform.DISCORD:
-                platforms["discord"] = _build_discord(adapter)
-            elif platform == Platform.SLACK:
-                platforms["slack"] = _build_slack(adapter)
+            # Only weixin platform supported
+            pass
         except Exception as e:
             logger.warning("Channel directory: failed to build %s: %s", platform.value, e)
 

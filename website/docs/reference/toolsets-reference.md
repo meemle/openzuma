@@ -105,7 +105,6 @@ Platform toolsets define the complete tool configuration for a deployment target
 | `openzuma-bluebubbles` | Same as `openzuma-cli`. |
 | `openzuma-dingtalk` | Same as `openzuma-cli`. |
 | `openzuma-feishu` | Same as `openzuma-cli`. Note: the `feishu_doc` / `feishu_drive` toolsets are used only by the document-comment handler, not by the regular Feishu chat adapter. |
-| `openzuma-qqbot` | Same as `openzuma-cli`. |
 | `openzuma-wecom` | Same as `openzuma-cli`. |
 | `openzuma-wecom-callback` | Same as `openzuma-cli`. |
 | `openzuma-weixin` | Same as `openzuma-cli`. |

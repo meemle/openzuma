@@ -35,7 +35,6 @@ PLATFORMS: OrderedDict[str, PlatformInfo] = OrderedDict([
     ("wecom",          PlatformInfo(label="💬 WeCom",           default_toolset="openzuma-wecom")),
     ("wecom_callback", PlatformInfo(label="💬 WeCom Callback",  default_toolset="openzuma-wecom-callback")),
     ("weixin",         PlatformInfo(label="💬 Weixin",          default_toolset="openzuma-weixin")),
-    ("qqbot",          PlatformInfo(label="💬 QQBot",           default_toolset="openzuma-qqbot")),
     ("webhook",        PlatformInfo(label="🔗 Webhook",         default_toolset="openzuma-webhook")),
     ("api_server",     PlatformInfo(label="🌐 API Server",      default_toolset="openzuma-api-server")),
 ])

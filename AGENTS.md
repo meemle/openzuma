@@ -55,7 +55,7 @@ openzuma-agent/
 ├── gateway/              # Messaging platform gateway
 │   ├── run.py            # Main loop, slash commands, message dispatch
 │   ├── session.py        # SessionStore — conversation persistence
-│   └── platforms/        # Adapters: telegram, discord, slack, whatsapp, homeassistant, signal, qqbot
+│   └── platforms/        # Adapters: telegram, discord, slack, whatsapp, homeassistant, signal
 ├── ui-tui/               # Ink (React) terminal UI — `openzuma --tui`
 │   ├── src/entry.tsx        # TTY gate + render()
 │   ├── src/app.tsx          # Main state machine and UI
