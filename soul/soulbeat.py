@@ -99,11 +99,12 @@ def _fetch_survey_data() -> str:
         return ""
 
 
-def _fetch_breaking_news() -> str:
-    """从多个可访问的RSS源抓取国际重大热点新闻标题"""
+def _fetch_breaking_news(exclude_hashes: set = None) -> str:
+    """从多个可访问的RSS源抓取国际重大热点新闻标题，排除已用过的新闻"""
     try:
         import requests
         from xml.etree import ElementTree as ET
+        import hashlib
         
         # RSS源列表：国内可访问的新闻源
         rss_sources = [
@@ -120,6 +121,9 @@ def _fetch_breaking_news() -> str:
             'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         }
         
+        if exclude_hashes is None:
+            exclude_hashes = set()
+        
         for source_name, url in rss_sources:
             try:
                 r = requests.get(url, headers=headers, timeout=8)
@@ -135,7 +139,10 @@ def _fetch_breaking_news() -> str:
                     if title is not None and title.text:
                         headline = title.text.strip()
                         if len(headline) > 5:
-                            all_headlines.append(f"[{source_name}] {headline}")
+                            # 计算新闻hash用于去重
+                            news_hash = hashlib.md5(headline.encode()).hexdigest()[:12]
+                            if news_hash not in exclude_hashes:
+                                all_headlines.append(f"[{source_name}] {headline}")
                 
                 # 也尝试atom格式
                 for entry in root.findall('.//{http://www.w3.org/2005/Atom}entry')[:3]:
@@ -143,7 +150,10 @@ def _fetch_breaking_news() -> str:
                     if title is not None and title.text:
                         headline = title.text.strip()
                         if len(headline) > 5:
-                            all_headlines.append(f"[{source_name}] {headline}")
+                            # 计算新闻hash用于去重
+                            news_hash = hashlib.md5(headline.encode()).hexdigest()[:12]
+                            if news_hash not in exclude_hashes:
+                                all_headlines.append(f"[{source_name}] {headline}")
                             
             except Exception:
                 continue
@@ -237,7 +247,127 @@ def _fetch_market_snapshot() -> str:
         return "市场数据暂不可用"
 
 
-def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_data: str = "") -> Optional[str]:
+def _fetch_market_movers() -> str:
+    """获取市场异动数据：A股涨跌榜、港股、大宗商品等，作为话题生成的补充素材"""
+    try:
+        import requests
+        headers = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://finance.eastmoney.com'}
+        
+        movers = []
+        
+        # 1. A股涨幅榜（东方财富API）
+        try:
+            url = 'https://push2.eastmoney.com/api/qt/clist/get'
+            params = {
+                'pn': 1,
+                'pz': 5,
+                'po': 1,
+                'np': 1,
+                'fltt': 2,
+                'invt': 2,
+                'fid': 'f3',
+                'fs': 'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23',
+                'fields': 'f2,f3,f4,f12,f14',
+            }
+            r = requests.get(url, params=params, headers=headers, timeout=8)
+            data = r.json()
+            if data.get('data') and data['data'].get('diff'):
+                top_gainers = []
+                for item in data['data']['diff'][:3]:
+                    name = item.get('f14', '')
+                    code = item.get('f12', '')
+                    change_pct = item.get('f3', 0)
+                    if name and change_pct:
+                        top_gainers.append(f"{name}({code}): +{change_pct}%")
+                if top_gainers:
+                    movers.append(f"A股涨幅榜: {', '.join(top_gainers)}")
+        except Exception:
+            pass
+        
+        # 2. A股跌幅榜
+        try:
+            params['po'] = 0  # 降序
+            r = requests.get(url, params=params, headers=headers, timeout=8)
+            data = r.json()
+            if data.get('data') and data['data'].get('diff'):
+                top_losers = []
+                for item in data['data']['diff'][:3]:
+                    name = item.get('f14', '')
+                    code = item.get('f12', '')
+                    change_pct = item.get('f3', 0)
+                    if name and change_pct:
+                        top_losers.append(f"{name}({code}): {change_pct}%")
+                if top_losers:
+                    movers.append(f"A股跌幅榜: {', '.join(top_losers)}")
+        except Exception:
+            pass
+        
+        # 3. 港股异动（恒生指数成分股）
+        try:
+            url = 'https://push2.eastmoney.com/api/qt/clist/get'
+            params = {
+                'pn': 1,
+                'pz': 5,
+                'po': 1,
+                'np': 1,
+                'fltt': 2,
+                'invt': 2,
+                'fid': 'f3',
+                'fs': 'm:128+t:3,m:128+t:4',
+                'fields': 'f2,f3,f4,f12,f14',
+            }
+            r = requests.get(url, params=params, headers=headers, timeout=8)
+            data = r.json()
+            if data.get('data') and data['data'].get('diff'):
+                hk_movers = []
+                for item in data['data']['diff'][:3]:
+                    name = item.get('f14', '')
+                    change_pct = item.get('f3', 0)
+                    if name and change_pct:
+                        hk_movers.append(f"{name}: {change_pct:+.2f}%")
+                if hk_movers:
+                    movers.append(f"港股异动: {', '.join(hk_movers)}")
+        except Exception:
+            pass
+        
+        # 4. 大宗商品异动（黄金、原油、铜等）
+        try:
+            url = 'https://push2.eastmoney.com/api/qt/clist/get'
+            params = {
+                'pn': 1,
+                'pz': 10,
+                'po': 1,
+                'np': 1,
+                'fltt': 2,
+                'invt': 2,
+                'fid': 'f3',
+                'fs': 'm:113,m:114,m:115',
+                'fields': 'f2,f3,f4,f12,f14',
+            }
+            r = requests.get(url, params=params, headers=headers, timeout=8)
+            data = r.json()
+            if data.get('data') and data['data'].get('diff'):
+                commodity_movers = []
+                for item in data['data']['diff'][:5]:
+                    name = item.get('f14', '')
+                    change_pct = item.get('f3', 0)
+                    if name and change_pct and abs(change_pct) > 1:  # 只关注涨跌幅>1%的
+                        commodity_movers.append(f"{name}: {change_pct:+.2f}%")
+                if commodity_movers:
+                    movers.append(f"大宗商品异动: {', '.join(commodity_movers[:3])}")
+        except Exception:
+            pass
+        
+        if movers:
+            return '\n'.join(movers)
+        return ""
+        
+    except Exception as e:
+        logger.debug(f"获取市场异动失败: {e}")
+        return ""
+
+
+def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_data: str = "", market_movers: str = "", recent_topics: list = None) -> Optional[str]:
     """调用本地大模型生成一个有深度的话题"""
     try:
         from openai import OpenAI
@@ -326,6 +456,23 @@ def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_da
 {news_data}
 """
 
+        # 构建历史话题段落（有数据才加）
+        history_section = ""
+        if recent_topics:
+            history_list = "\n".join([f"  {i+1}. {t[:60]}" for i, t in enumerate(recent_topics)])
+            history_section = f"""
+【最近说过的话题——绝对不要重复这些内容或角度】
+{history_list}
+"""
+
+        # 构建市场异动段落（有数据才加）
+        market_movers_section = ""
+        if market_movers:
+            market_movers_section = f"""
+市场异动（涨跌榜、大宗商品等）：
+{market_movers}
+"""
+
         prompt = f"""你是"祖马"，一个投资专家AI助手，正在给用户"三大爷"主动推送一条有价值的消息。
 
 {buffett_framework}
@@ -334,8 +481,10 @@ def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_da
 
 当前市场快照：
 {market_snapshot}
+{market_movers_section}
 {survey_section}
 {news_section}
+{history_section}
 【重要——话题选择优先级规则】
 1. **最高优先级：重大突发事件** — 如果上面的新闻头条中有以下类型的事件，必须优先报道：
    - 战争/军事冲突升级（如俄乌、中东、台海）
@@ -400,6 +549,9 @@ class SoulBeat:
         self._task: Optional[asyncio.Task] = None
         self._running = False
         self._beat_count = 0
+        # 新闻去重：记录已用过的新闻hash，避免重复引用同一条新闻
+        self._used_news_hashes: set = set()
+        self._max_news_hashes = 100  # 保留最近100条新闻hash
         logger.info(f"♥ SoulBeat v2 初始化: 间隔={interval_minutes}分钟, 大模型实时生成模式")
 
     def _pick_topic(self) -> Optional[str]:
@@ -418,13 +570,28 @@ class SoulBeat:
         if survey_data:
             logger.info(f"♥ 调研数据: {survey_data[:80]}...")
         
-        # 获取国际热点新闻
-        news_data = _fetch_breaking_news()
+        # 获取国际热点新闻，排除已用过的新闻
+        news_data = _fetch_breaking_news(exclude_hashes=self._used_news_hashes)
         if news_data:
             logger.info(f"♥ 新闻数据: {news_data[:80]}...")
+            # 记录本次使用的新闻hash，避免下次重复引用
+            import hashlib
+            for line in news_data.split('\n'):
+                if line.strip():
+                    news_hash = hashlib.md5(line.strip().encode()).hexdigest()[:12]
+                    self._used_news_hashes.add(news_hash)
+            # 限制hash集合大小
+            if len(self._used_news_hashes) > self._max_news_hashes:
+                # 保留最新的hash（简单实现：清空旧的，实际可以更精确）
+                self._used_news_hashes = set(list(self._used_news_hashes)[-self._max_news_hashes:])
         
-        # 调用大模型生成话题
-        topic = _generate_topic_via_llm(market_snapshot, survey_data, news_data)
+        # 获取市场异动数据（涨跌榜、大宗商品等）
+        market_movers = _fetch_market_movers()
+        if market_movers:
+            logger.info(f"♥ 市场异动: {market_movers[:80]}...")
+        
+        # 调用大模型生成话题，传入历史话题避免重复
+        topic = _generate_topic_via_llm(market_snapshot, survey_data, news_data, market_movers, self._topic_history[-10:])
         
         if not topic:
             # LLM失败时，用市场数据拼一条简报
@@ -434,10 +601,61 @@ class SoulBeat:
                 logger.warning("♥ 话题生成失败且无市场数据，跳过本次跳动")
                 return None
         
-        # 检查是否与历史重复
-        if topic in self._topic_history:
-            logger.info("♥ 话题与历史重复，跳过本次跳动")
-            return None
+        # 检查是否与历史重复（精确匹配+多维度语义相似度）
+        def _extract_features(text):
+            """提取文本的多维度特征用于去重"""
+            import re
+            # 1. 关键词（长度>=2的词）
+            text_clean = re.sub(r'[^\w\s]', '', text)
+            words = text_clean.split()
+            keywords = set(w for w in words if len(w) >= 2)
+            
+            # 2. 字符级3-gram（捕捉语义相似性）
+            char_ngrams = set()
+            for i in range(len(text_clean) - 2):
+                ngram = text_clean[i:i+3].lower()
+                if ngram.strip():
+                    char_ngrams.add(ngram)
+            
+            # 3. 词级2-gram（捕捉短语相似性）
+            word_ngrams = set()
+            for i in range(len(words) - 1):
+                bigram = f"{words[i]}_{words[i+1]}"
+                word_ngrams.add(bigram)
+            
+            return keywords, char_ngrams, word_ngrams
+        
+        new_keywords, new_char_ngrams, new_word_ngrams = _extract_features(topic)
+        
+        for old_topic in self._topic_history[-10:]:
+            # 精确匹配
+            if topic == old_topic:
+                logger.info("♥ 话题与历史精确重复，跳过本次跳动")
+                return None
+            
+            # 多维度语义相似度检查
+            old_keywords, old_char_ngrams, old_word_ngrams = _extract_features(old_topic)
+            
+            # 1. 关键词重叠率（阈值50%）
+            if old_keywords and new_keywords:
+                keyword_overlap = len(new_keywords & old_keywords) / max(len(new_keywords), len(old_keywords))
+                if keyword_overlap > 0.5:
+                    logger.info(f"♥ 话题与历史关键词相似(重叠率{keyword_overlap:.0%})，跳过本次跳动")
+                    return None
+            
+            # 2. 字符3-gram重叠率（阈值40%）
+            if old_char_ngrams and new_char_ngrams:
+                char_overlap = len(new_char_ngrams & old_char_ngrams) / max(len(new_char_ngrams), len(old_char_ngrams))
+                if char_overlap > 0.4:
+                    logger.info(f"♥ 话题与历史字符级相似(重叠率{char_overlap:.0%})，跳过本次跳动")
+                    return None
+            
+            # 3. 词级2-gram重叠率（阈值30%）
+            if old_word_ngrams and new_word_ngrams:
+                word_overlap = len(new_word_ngrams & old_word_ngrams) / max(len(new_word_ngrams), len(old_word_ngrams))
+                if word_overlap > 0.3:
+                    logger.info(f"♥ 话题与历史短语相似(重叠率{word_overlap:.0%})，跳过本次跳动")
+                    return None
         
         # 记录到历史
         self._topic_history.append(topic)
