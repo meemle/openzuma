@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@openzuma/ink": ["src/types/openzuma-ink.d.ts"]
-    }
-  }
-}

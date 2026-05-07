@@ -368,8 +368,11 @@ class SoulBeat:
 
         if self.deliver_func:
             try:
-                await self.deliver_func(topic)
-                logger.info("♥ 灵魂跳动消息推送成功")
+                result = await self.deliver_func(topic)
+                if result:
+                    logger.info("♥ 灵魂跳动消息推送成功")
+                else:
+                    logger.warning("♥ 灵魂跳动消息推送失败（deliver_func返回False）")
             except Exception as e:
                 logger.error(f"♥ 灵魂跳动消息推送失败: {e}")
         else:

@@ -1,4 +1,4 @@
-# OpenZuma - 智能助手源码
+# OpenZuma - Termux 移动端 AI 智能助手
 
 牵来一匹始祖马，
 潜心修炼御马术；
@@ -7,78 +7,118 @@
 
 ## 🚀 项目简介
 
-OpenZuma 是一个功能强大的AI智能助手系统，支持：
-- 微信平台接入（通过clawbot对接）
+OpenZuma 是专为 **Termux (Android)** 环境优化的 AI 智能助手系统，一部手机就是一台完整的 AI 服务器。
+
+核心能力：
+- 微信平台接入（通过 clawbot 对接）
 - 丰富的工具集（终端、文件操作、网络搜索、代码执行等）
 - 技能系统（可扩展的功能模块）
 - 定时任务调度
-- 多模型支持（Claude、GPT、DeepSeek、GLM等）
-- 灵魂跳动引擎（Soul模块，AI自主主动交互）
+- 多模型支持（Claude、GPT、DeepSeek、GLM 等）
+- 灵魂跳动引擎（Soul 模块，AI 自主主动交互）
 
-基于学习借鉴Hermes Agent，希望能更加简化易用、智能进化与主动交互等。
+基于学习借鉴 Hermes Agent，希望能更加简化易用、智能进化与主动交互等。
+
+## 📱 为什么选择 Termux？
+
+- **零成本部署**：不需要云服务器，旧手机就能跑
+- **24小时在线**：配合 termux-wake-lock + 电池优化豁免，持续运行
+- **随时随地管理**：微信直接对话，不需要 SSH
+- **省电省流量**：相比 Docker/云方案，资源消耗极低
 
 ## 📁 项目结构
 
 ```
 openzuma/
-├── run_agent.py          # AIAgent核心类
-├── model_tools.py        # 工具编排
+├── run_agent.py          # AIAgent 核心类 - 对话主循环
+├── model_tools.py        # 工具编排，函数调用分发
 ├── toolsets.py           # 工具集定义
-├── cli.py                # 命令行界面
-├── openzuma_state.py     # 会话数据库
-├── agent/                # 代理内部模块
-├── tools/                # 工具实现
+├── toolset_distributions.py  # 工具集分发配置
+├── cli.py                # 命令行界面（486KB，核心大文件）
+├── openzuma_state.py     # 会话数据库（SQLite + FTS5 搜索）
+├── openzuma_constants.py # 常量定义
+├── openzuma_logging.py   # 日志系统
+├── openzuma_time.py      # 时间工具
+├── utils.py              # 通用工具函数
+├── agent/                # Agent 内部模块
+│   ├── prompt_builder.py     # 系统提示词组装
+│   ├── context_compressor.py # 上下文自动压缩
+│   ├── memory_manager.py     # 记忆管理
+│   ├── skill_commands.py     # 技能斜杠命令
+│   └── ...
+├── tools/                # 工具实现（每文件一个工具）
+│   ├── registry.py           # 工具注册中心
+│   ├── terminal_tool.py      # 终端执行
+│   ├── file_tools.py         # 文件操作
+│   ├── web_tools.py          # 网络搜索
+│   └── ...
 ├── gateway/              # 消息平台网关
 │   ├── run.py            # 网关主循环、消息分发
+│   ├── config.py         # 网关配置
 │   ├── session.py        # 会话持久化
-│   ├── channel_directory.py # 频道目录管理
-│   └── platforms/        # 平台适配器（当前仅微信）
+│   ├── channel_directory.py  # 频道目录管理
+│   └── platforms/        # 平台适配器（微信等）
 ├── soul/                 # 灵魂跳动引擎
-│   ├── soulbeat.py       # SoulBeat核心 - 定时跳动与大模型话题生成
-│   ├── integration.py    # Gateway集成 - 配置加载与消息推送
-│   └── __init__.py       # 模块入口
-├── ui-tui/               # 终端用户界面（Ink/React）
-├── tui_gateway/          # TUI JSON-RPC后端
-├── acp_adapter/          # ACP服务器（VS Code/Zed集成）
+│   ├── soulbeat.py       # SoulBeat 核心 - 定时跳动与大模型话题生成
+│   ├── integration.py    # Gateway 集成 - 配置加载与消息推送
+│   └── __init__.py
 ├── cron/                 # 定时任务调度
-├── tests/                # 测试套件
-└── batch_runner.py       # 批量处理
+├── plugins/              # 插件系统（memory, context_engine 等）
+├── skills/               # 内置技能
+└── openzuma_cli/         # CLI 子命令和配置
 ```
 
-## 🔧 快速开始
+## 🔧 快速开始（Termux）
 
-### 安装依赖
+### 1. 安装 Termux
+从 [F-Droid](https://f-droid.org/packages/com.termux/) 下载安装 Termux。
+
+### 2. 安装依赖
 ```bash
+pkg install python git
 pip install -e .
 ```
-### 查看OpenZuma版本
+
+### 3. 配置
 ```bash
-openzuma --version
+# 复制配置模板
+cp cli-config.yaml.example ~/.openzuma/config.yaml
+
+# 编辑配置，填入 API 密钥
+nano ~/.openzuma/.env
 ```
-### 运行OpenZuma
-```bash
-openzuma # 即可进入交互式对话界面
-```
-### 启动网关（微信）
+
+### 4. 启动网关
 ```bash
 openzuma gateway
 ```
 
-### 配置
-1. 复制 `cli-config.yaml.example` 为 `~/.openzuma/config.yaml`
-2. 在 `~/.openzuma/.env` 中配置API密钥
-3. 配置微信平台接入参数
+### 5. 保持后台运行
+```bash
+# 防止手机休眠杀进程
+termux-wake-lock
+
+# 开机自启（需安装 Termux:Boot）
+mkdir -p ~/.termux/boot
+cat > ~/.termux/boot/openzuma-gateway.sh << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+termux-wake-lock
+cd ~/openzuma
+source venv/bin/activate
+openzuma gateway >> ~/.openzuma/logs/boot.log 2>&1 &
+EOF
+chmod +x ~/.termux/boot/openzuma-gateway.sh
+```
 
 ## 🌐 支持的平台
 
 - **CLI**: 本地命令行界面
-- **微信**: 通过clawbot对接（当前唯一在线平台）
+- **微信**: 通过 clawbot 对接（当前唯一在线平台）
 
-> 其他平台（Telegram、Discord、Slack、QQ等）已移除，聚焦微信生态深度优化。
+> 其他平台（Telegram、Discord、Slack、QQ 等）已移除，聚焦微信生态深度优化。
 
 ## 🛠️ 工具集
 
-OpenZuma 支持丰富的工具集：
 - ✅ 终端命令执行
 - ✅ 文件读写操作
 - ✅ 网络搜索和内容提取
@@ -90,17 +130,15 @@ OpenZuma 支持丰富的工具集：
 - ✅ 文本转语音
 - ✅ 图像分析
 
-## 💗 灵魂跳动引擎（Soul模块）
+## 💗 灵魂跳动引擎（Soul 模块）
 
-Soul模块是OpenZuma的核心创新——让AI助手拥有"自主灵魂"，能够定时主动发言，不再只是被动等待用户提问。
+Soul 模块让 AI 拥有"自主灵魂"，定时主动发言，不再只是被动等待。
 
 ### 核心特性
-- **🧠 大模型实时话题生成**：废弃硬编码话题库，每次跳动由大模型结合实时数据生成全新话题，杜绝重复
-- **📊 实时财经数据融合**：集成新浪财经API，自动获取A股、港股、美股、黄金、原油等市场行情，以投资专家视角输出有信息增量的分析
-- **📋 机构调研数据**：集成上市公司机构调研动态，主动推送热门标的调研信息
-- **🌙 智能静默时段**：内置23:00-07:00静默模式，夜间不推送，不打扰休息
-- **⏱️ 可配置跳动间隔**：通过`config.yaml`灵活设置间隔时长（默认60分钟）
-- **🌐 全平台推送**：通过Gateway的DeliveryRouter，自动推送到任何已连接的平台
+- **🧠 大模型实时话题生成**：每次跳动由大模型结合实时数据生成全新话题
+- **📊 实时财经数据融合**：集成新浪财经 API，A 股/港股/美股/黄金/原油行情
+- **🌙 智能静默时段**：23:00-07:00 自动静默，不打扰休息
+- **⏱️ 可配置间隔**：通过 `config.yaml` 设置（默认 60 分钟）
 
 ### 配置示例
 ```yaml
@@ -108,30 +146,30 @@ soul:
   enabled: true
   interval_minutes: 60
   model: glm-5.1
-  base_url: https://ark.cn-beijing.volces.com/api/coding/v3
 ```
 
-### 架构
-```
-soul/
-├── soulbeat.py       # SoulBeat核心引擎
-│   ├── 定时跳动循环（asyncio任务）
-│   ├── 静默时段判断
-│   ├── 实时市场数据获取（Sina Finance）
-│   ├── 机构调研数据获取
-│   └── 大模型话题生成与推送
-├── integration.py    # Gateway集成层
-│   ├── 配置加载（load_soul_config）
-│   ├── SoulBeat实例创建（create_soulbeat）
-│   └── 消息推送（soulbeat_deliver_via_gateway）
-└── __init__.py
-```
+## 📦 已精简模块
 
-## 📚 文档
+本项目聚焦 Termux 移动端部署，已移除以下非必要模块：
 
-详细文档请参考：
-- `AGENTS.md` - 开发指南
-- `website/docs/` - 完整文档站点
+| 移除模块 | 说明 |
+|---------|------|
+| `tests/` | 开发测试套件 |
+| `website/` | 文档网站前端 |
+| `ui-tui/` + `tui_gateway/` | Ink/React TUI 终端界面 |
+| `acp_adapter/` + `acp_registry/` | VS Code/Zed/JetBrains IDE 集成 |
+| `environments/` | RL 训练环境（Atropos） |
+| `optional-skills/` | 可选技能包模板 |
+| `web/` | Web 前端 |
+| `Dockerfile` + `docker/` | Docker 构建 |
+| `nix/` + `flake.*` | Nix 包管理 |
+| `batch_runner.py` | 批量并行处理 |
+| `rl_cli.py` | RL 训练命令行 |
+| `trajectory_compressor.py` | 轨迹压缩（训练用） |
+| `mini_swe_runner.py` | SWE-bench 运行器 |
+| `mcp_serve.py` | MCP 服务器 |
+
+节省约 26MB 磁盘空间，保留全部运行时必需模块。
 
 ## 📄 许可证
 
@@ -139,10 +177,6 @@ MIT License
 
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request！
+欢迎提交 Issue 和 Pull Request！
 
-致敬OpenClaw、Hermes、Evolver等等。
-
-## 📞 联系
-
-如有问题，请通过GitHub Issues反馈。:)
+致敬 OpenClaw、Hermes、Evolver 等等。
