@@ -99,6 +99,74 @@ def _fetch_survey_data() -> str:
         return ""
 
 
+def _fetch_breaking_news() -> str:
+    """从多个可访问的RSS源抓取国际重大热点新闻标题"""
+    try:
+        import requests
+        from xml.etree import ElementTree as ET
+        
+        # RSS源列表：国内可访问的新闻源
+        rss_sources = [
+            ("华尔街日报", "https://feeds.a.dj.com/rss/RSSWorldNews.xml"),
+            ("环球时报", "https://www.globaltimes.cn/rss/outbrain.xml"),
+            ("36氪", "https://36kr.com/feed"),
+            ("中国日报", "https://www.chinadaily.com.cn/rss/world_rss.xml"),
+            ("新华社", "http://www.news.cn/english/rss/worldnews.xml"),
+        ]
+        
+        all_headlines = []
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        }
+        
+        for source_name, url in rss_sources:
+            try:
+                r = requests.get(url, headers=headers, timeout=8)
+                if r.status_code != 200:
+                    continue
+                
+                # 解析RSS XML
+                root = ET.fromstring(r.content)
+                
+                # 提取item/title
+                for item in root.findall('.//item')[:3]:  # 每个源取前3条
+                    title = item.find('title')
+                    if title is not None and title.text:
+                        headline = title.text.strip()
+                        if len(headline) > 5:
+                            all_headlines.append(f"[{source_name}] {headline}")
+                
+                # 也尝试atom格式
+                for entry in root.findall('.//{http://www.w3.org/2005/Atom}entry')[:3]:
+                    title = entry.find('{http://www.w3.org/2005/Atom}title')
+                    if title is not None and title.text:
+                        headline = title.text.strip()
+                        if len(headline) > 5:
+                            all_headlines.append(f"[{source_name}] {headline}")
+                            
+            except Exception:
+                continue
+        
+        if all_headlines:
+            # 去重并限制数量
+            seen = set()
+            unique = []
+            for h in all_headlines:
+                # 用标题后半部分去重（前缀可能不同）
+                key = h.split(']', 1)[-1].strip()[:30] if ']' in h else h[:30]
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(h)
+            
+            return '\n'.join(unique[:15])  # 最多15条
+        return ""
+        
+    except Exception as e:
+        logger.debug(f"获取新闻失败: {e}")
+        return ""
+
+
 def _fetch_market_snapshot() -> str:
     """从Sina Finance API获取实时市场快照，作为话题生成的素材"""
     try:
@@ -169,7 +237,7 @@ def _fetch_market_snapshot() -> str:
         return "市场数据暂不可用"
 
 
-def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "") -> Optional[str]:
+def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_data: str = "") -> Optional[str]:
     """调用本地大模型生成一个有深度的话题"""
     try:
         from openai import OpenAI
@@ -250,6 +318,14 @@ def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "") -> Opti
 - 不推荐追涨——"这次不一样"是最危险的五个字
 - 不推荐不懂的领域——FOMO不是投资理由"""
 
+        # 构建新闻数据段落（有数据才加）
+        news_section = ""
+        if news_data:
+            news_section = f"""
+最新国际新闻头条：
+{news_data}
+"""
+
         prompt = f"""你是"祖马"，一个投资专家AI助手，正在给用户"三大爷"主动推送一条有价值的消息。
 
 {buffett_framework}
@@ -259,16 +335,28 @@ def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "") -> Opti
 当前市场快照：
 {market_snapshot}
 {survey_section}
-要求：
-1. 基于上面的实时数据（市场行情+机构调研动态），结合巴菲特投资框架给出你的个人判断或发现一个值得关注的市场信号
-2. 机构调研数据是重要情报——哪些公司被大量机构扎堆调研往往预示着市场关注方向，可以据此分析机构偏好和行业轮动趋势
-3. 也可以结合当前国际热点（地缘政治、央行政策、科技突破等）输出观点
-4. 观点必须符合巴菲特框架：有逻辑支撑、考虑下行风险、不喊单不荐股、不在能力圈外乱说
-5. 绝对不要说废话、套话、心灵鸡汤
-6. 要有信息增量，让人看了想继续聊
-7. 控制在2-3句话以内，简洁有力
-8. 不要用emoji开头
-9. 绝对不要重复之前说过的话题
+{news_section}
+【重要——话题选择优先级规则】
+1. **最高优先级：重大突发事件** — 如果上面的新闻头条中有以下类型的事件，必须优先报道：
+   - 战争/军事冲突升级（如俄乌、中东、台海）
+   - 重大地缘政治事件（如制裁、断交、峰会）
+   - 全球央行政策突变（如意外加息/降息）
+   - 重大科技突破（如AI新模型发布、芯片突破）
+   - 金融市场剧变（如美股暴跌、加密货币崩盘）
+   - 重大自然灾害或疫情
+   报道时要简明扼要说清楚"发生了什么"和"对投资/市场可能有什么影响"
+
+2. **次优先级：市场信号** — 基于市场行情+机构调研数据，结合巴菲特框架给出判断
+
+3. **普通话题：投资观点** — 如果没有重大事件，可以分享投资洞察或市场观察
+
+其他要求：
+- 观点必须符合巴菲特框架：有逻辑支撑、考虑下行风险、不喊单不荐股、不在能力圈外乱说
+- 绝对不要说废话、套话、心灵鸡汤
+- 要有信息增量，让人看了想继续聊
+- 控制在2-3句话以内，简洁有力
+- 不要用emoji开头
+- 绝对不要重复之前说过的话题
 
 直接输出内容，不要加任何前缀或标签。"""
 
@@ -330,8 +418,13 @@ class SoulBeat:
         if survey_data:
             logger.info(f"♥ 调研数据: {survey_data[:80]}...")
         
+        # 获取国际热点新闻
+        news_data = _fetch_breaking_news()
+        if news_data:
+            logger.info(f"♥ 新闻数据: {news_data[:80]}...")
+        
         # 调用大模型生成话题
-        topic = _generate_topic_via_llm(market_snapshot, survey_data)
+        topic = _generate_topic_via_llm(market_snapshot, survey_data, news_data)
         
         if not topic:
             # LLM失败时，用市场数据拼一条简报
