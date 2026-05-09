@@ -15,10 +15,18 @@ import asyncio
 import logging
 import os
 import json
+import hashlib
 from datetime import datetime
 from typing import Callable, Optional, List, Dict, Any
+from pathlib import Path
 
 logger = logging.getLogger("openzuma.soul")
+
+# ====== 持久化存储路径 ======
+_state_dir = Path(os.path.expanduser("~/.openzuma/state"))
+_state_dir.mkdir(parents=True, exist_ok=True)
+_topic_history_file = _state_dir / "soulbeat_topic_history.json"
+_news_hashes_file = _state_dir / "soulbeat_news_hashes.json"
 
 # ====== 静默时段配置 ======
 SILENT_HOUR_START = 23  # 23:00开始静默
@@ -31,6 +39,29 @@ def _is_silent_hours() -> bool:
     if SILENT_HOUR_START <= hour or hour < SILENT_HOUR_END:
         return True
     return False
+
+
+def _load_persistent_data(file_path: Path, default=None):
+    """从JSON文件加载持久化数据"""
+    try:
+        if file_path.exists():
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                logger.debug(f"♥ 从 {file_path.name} 加载了 {len(data) if isinstance(data, (list, set)) else 'N/A'} 条记录")
+                return data
+    except Exception as e:
+        logger.warning(f"♥ 加载 {file_path.name} 失败: {e}")
+    return default if default is not None else []
+
+
+def _save_persistent_data(file_path: Path, data):
+    """保存数据到JSON文件"""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.debug(f"♥ 保存到 {file_path.name}: {len(data) if isinstance(data, (list, set)) else 'N/A'} 条记录")
+    except Exception as e:
+        logger.warning(f"♥ 保存 {file_path.name} 失败: {e}")
 
 
 def _fetch_survey_data() -> str:
@@ -106,13 +137,19 @@ def _fetch_breaking_news(exclude_hashes: set = None) -> str:
         from xml.etree import ElementTree as ET
         import hashlib
         
-        # RSS源列表：国内可访问的新闻源
+        # RSS源列表：国内可访问的财经新闻源（2026.5.9 更新）
         rss_sources = [
+            # 国际主流
             ("华尔街日报", "https://feeds.a.dj.com/rss/RSSWorldNews.xml"),
-            ("环球时报", "https://www.globaltimes.cn/rss/outbrain.xml"),
-            ("36氪", "https://36kr.com/feed"),
+            # 国内官方/主流
             ("中国日报", "https://www.chinadaily.com.cn/rss/world_rss.xml"),
-            ("新华社", "http://www.news.cn/english/rss/worldnews.xml"),
+            ("环球时报", "https://www.globaltimes.cn/rss/outbrain.xml"),
+            # 科技/商业
+            ("36氪", "https://36kr.com/feed"),
+            ("虎嗅", "https://www.huxiu.com/rss/0.xml"),
+            ("钛媒体", "https://www.tmtpost.com/feed"),
+            # 财经专业
+            ("第一财经", "https://www.yicai.com/feed"),
         ]
         
         all_headlines = []
@@ -169,12 +206,16 @@ def _fetch_breaking_news(exclude_hashes: set = None) -> str:
                     seen.add(key)
                     unique.append(h)
             
-            return '\n'.join(unique[:15])  # 最多15条
-        return ""
+            # 返回新闻标题和标题hash（用于新闻级去重）
+            news_text = '\n'.join(unique[:15])  # 最多15条
+            # 计算所有新闻标题的组合hash，用于判断是否是同一批新闻
+            combined_hash = hashlib.md5(news_text.encode()).hexdigest()[:12]
+            return news_text, combined_hash
+        return "", ""
         
     except Exception as e:
         logger.debug(f"获取新闻失败: {e}")
-        return ""
+        return "", ""
 
 
 def _fetch_market_snapshot() -> str:
@@ -543,16 +584,18 @@ class SoulBeat:
     ):
         self.deliver_func = deliver_func
         self.interval_minutes = interval_minutes
-        # v2: 话题历史记录，用于防重复
-        self._topic_history: List[str] = []
+        # v2: 话题历史记录，用于防重复（从文件加载）
+        self._topic_history: List[str] = _load_persistent_data(_topic_history_file, default=[])
         self._max_history = 50  # 保留最近50条话题历史
         self._task: Optional[asyncio.Task] = None
         self._running = False
         self._beat_count = 0
-        # 新闻去重：记录已用过的新闻hash，避免重复引用同一条新闻
-        self._used_news_hashes: set = set()
+        # 新闻去重：记录已用过的新闻hash，避免重复引用同一条新闻（从文件加载）
+        loaded_hashes = _load_persistent_data(_news_hashes_file, default=[])
+        self._used_news_hashes: set = set(loaded_hashes)
         self._max_news_hashes = 100  # 保留最近100条新闻hash
         logger.info(f"♥ SoulBeat v2 初始化: 间隔={interval_minutes}分钟, 大模型实时生成模式")
+        logger.info(f"♥ 加载了 {len(self._topic_history)} 条历史话题, {len(self._used_news_hashes)} 条新闻hash")
 
     def _pick_topic(self) -> Optional[str]:
         """v2: 通过大模型+实时数据生成话题"""
@@ -571,19 +614,27 @@ class SoulBeat:
             logger.info(f"♥ 调研数据: {survey_data[:80]}...")
         
         # 获取国际热点新闻，排除已用过的新闻
-        news_data = _fetch_breaking_news(exclude_hashes=self._used_news_hashes)
+        news_data, news_combined_hash = _fetch_breaking_news(exclude_hashes=self._used_news_hashes)
         if news_data:
+            # 检查是否是同一批新闻（新闻级去重）
+            if news_combined_hash in self._used_news_hashes:
+                logger.info(f"♥ 新闻标题与历史重复(combined_hash={news_combined_hash})，跳过本次跳动")
+                return None
+            
             logger.info(f"♥ 新闻数据: {news_data[:80]}...")
             # 记录本次使用的新闻hash，避免下次重复引用
-            import hashlib
             for line in news_data.split('\n'):
                 if line.strip():
                     news_hash = hashlib.md5(line.strip().encode()).hexdigest()[:12]
                     self._used_news_hashes.add(news_hash)
+            # 记录新闻标题组合hash
+            self._used_news_hashes.add(news_combined_hash)
             # 限制hash集合大小
             if len(self._used_news_hashes) > self._max_news_hashes:
                 # 保留最新的hash（简单实现：清空旧的，实际可以更精确）
                 self._used_news_hashes = set(list(self._used_news_hashes)[-self._max_news_hashes:])
+            # 持久化保存新闻hash
+            _save_persistent_data(_news_hashes_file, list(self._used_news_hashes))
         
         # 获取市场异动数据（涨跌榜、大宗商品等）
         market_movers = _fetch_market_movers()
@@ -636,24 +687,24 @@ class SoulBeat:
             # 多维度语义相似度检查
             old_keywords, old_char_ngrams, old_word_ngrams = _extract_features(old_topic)
             
-            # 1. 关键词重叠率（阈值50%）
+            # 1. 关键词重叠率（阈值35%，更敏感）
             if old_keywords and new_keywords:
                 keyword_overlap = len(new_keywords & old_keywords) / max(len(new_keywords), len(old_keywords))
-                if keyword_overlap > 0.5:
+                if keyword_overlap > 0.35:
                     logger.info(f"♥ 话题与历史关键词相似(重叠率{keyword_overlap:.0%})，跳过本次跳动")
                     return None
             
-            # 2. 字符3-gram重叠率（阈值40%）
+            # 2. 字符3-gram重叠率（阈值25%，更敏感）
             if old_char_ngrams and new_char_ngrams:
                 char_overlap = len(new_char_ngrams & old_char_ngrams) / max(len(new_char_ngrams), len(old_char_ngrams))
-                if char_overlap > 0.4:
+                if char_overlap > 0.25:
                     logger.info(f"♥ 话题与历史字符级相似(重叠率{char_overlap:.0%})，跳过本次跳动")
                     return None
             
-            # 3. 词级2-gram重叠率（阈值30%）
+            # 3. 词级2-gram重叠率（阈值20%，更敏感）
             if old_word_ngrams and new_word_ngrams:
                 word_overlap = len(new_word_ngrams & old_word_ngrams) / max(len(new_word_ngrams), len(old_word_ngrams))
-                if word_overlap > 0.3:
+                if word_overlap > 0.2:
                     logger.info(f"♥ 话题与历史短语相似(重叠率{word_overlap:.0%})，跳过本次跳动")
                     return None
         
@@ -661,6 +712,8 @@ class SoulBeat:
         self._topic_history.append(topic)
         if len(self._topic_history) > self._max_history:
             self._topic_history = self._topic_history[-self._max_history:]
+        # 持久化保存话题历史
+        _save_persistent_data(_topic_history_file, self._topic_history)
         
         return topic
 
