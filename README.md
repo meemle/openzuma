@@ -16,6 +16,7 @@ OpenZuma 是专为 **Termux (Android)** 环境优化的 AI 智能助手系统，
 - 定时任务调度
 - 多模型支持（Claude、GPT、DeepSeek、GLM 等）
 - 灵魂跳动引擎（Soul 模块，AI 自主主动交互）
+- **语音交互（EAR 模块，录音→识别→大模型→语音回复）**
 
 基于学习借鉴 Hermes Agent，希望能更加简化易用、智能进化与主动交互等。
 
@@ -52,6 +53,12 @@ openzuma/
 │   ├── file_tools.py         # 文件操作
 │   ├── web_tools.py          # 网络搜索
 │   └── ...
+├── ear/                  # 🎤 EAR 语音交互模块
+│   ├── main.py            # 主程序（录音→STT→LLM→TTS）
+│   ├── config.py          # 配置（阈值、模型、语速）
+│   ├── start.sh           # 启动脚本（支持 --bg）
+│   ├── stop.sh            # 停止脚本
+│   └── README.md          # 模块说明
 ├── gateway/              # 消息平台网关
 │   ├── run.py            # 网关主循环、消息分发
 │   ├── config.py         # 网关配置
@@ -164,6 +171,51 @@ soul:
 | 机构调研 | 东方财富 | 被调研上市公司、机构数量、调研方式 |
 || 国际新闻 | RSS (7源) | 华尔街日报、环球时报、36氪、中国日报、虎嗅、钛媒体、第一财经 |
 | 市场异动 | 东方财富 | A股涨跌榜、港股、大宗商品 |
+
+## 🎤 EAR 语音交互模块
+
+EAR 是 OpenZuma 的语音交互模块，让 AI 能"听"能"说"。
+
+### 核心特性
+- **🎤 麦克风录音**：通过 `termux-microphone-record` 录音
+- **🧠 智能量检测**：只有检测到说话（能量>80）才触发识别，避免误触
+- **📝 小米 STT**：使用 `mimo-v2-omni` 模型进行语音识别，无需 Google 服务
+- **💬 大模型对话**：识别后自动调用大模型生成回复
+- **🔊 语音回复**：通过 `termux-tts-speak` 将回复转为语音播放
+- **🔄 连续监听**：识别后自动继续监听，支持连续对话
+- **⚙️ 自动启动**：网关启动时耳朵模块自动跟随启动
+
+### 技术方案
+```
+录音（5s WAV）→ ffmpeg 转码 → 小米 mimo-v2-omni 识别 → mimo-v2.5-pro 回复 → TTS 播放
+```
+
+### 配置（~/.openzuma/config.yaml）
+```yaml
+ear:
+  enabled: true
+  energy_threshold: 80    # 能量阈值，越低越灵敏
+  stt_model: mimo-v2-omni # 语音识别模型
+  llm_model: mimo-v2.5-pro # 对话模型
+  tts_rate: 1.3           # 语速（0.5-2.0）
+```
+
+### 手动控制
+```bash
+# 启动（前台）
+python3 ~/openzuma/ear/main.py
+
+# 启动（后台）
+~/openzuma/ear/start.sh --bg
+
+# 停止
+~/openzuma/ear/stop.sh
+```
+
+### 依赖
+- `ffmpeg`：音频转码
+- `termux-api`：麦克风录音 + TTS
+- 小米 API Key（语音识别 + 大模型对话）
 
 ## 📦 已精简模块
 

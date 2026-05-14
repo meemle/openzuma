@@ -553,7 +553,7 @@ def _generate_topic_via_llm(market_snapshot: str, survey_data: str = "", news_da
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
+            max_tokens=2000,  # 推理模型需要大量token完成推理+回答
             temperature=0.9,
         )
         
@@ -616,10 +616,9 @@ class SoulBeat:
         # 获取国际热点新闻，排除已用过的新闻
         news_data, news_combined_hash = _fetch_breaking_news(exclude_hashes=self._used_news_hashes)
         if news_data:
-            # 检查是否是同一批新闻（新闻级去重）
+            # 检查是否是同一批新闻（新闻级去重，放宽：不再跳过，只降级提示LLM换个角度）
             if news_combined_hash in self._used_news_hashes:
-                logger.info(f"♥ 新闻标题与历史重复(combined_hash={news_combined_hash})，跳过本次跳动")
-                return None
+                logger.info(f"♥ 新闻标题与历史重复(combined_hash={news_combined_hash})，仍尝试换个角度生成话题")
             
             logger.info(f"♥ 新闻数据: {news_data[:80]}...")
             # 记录本次使用的新闻hash，避免下次重复引用
@@ -652,61 +651,11 @@ class SoulBeat:
                 logger.warning("♥ 话题生成失败且无市场数据，跳过本次跳动")
                 return None
         
-        # 检查是否与历史重复（精确匹配+多维度语义相似度）
-        def _extract_features(text):
-            """提取文本的多维度特征用于去重"""
-            import re
-            # 1. 关键词（长度>=2的词）
-            text_clean = re.sub(r'[^\w\s]', '', text)
-            words = text_clean.split()
-            keywords = set(w for w in words if len(w) >= 2)
-            
-            # 2. 字符级3-gram（捕捉语义相似性）
-            char_ngrams = set()
-            for i in range(len(text_clean) - 2):
-                ngram = text_clean[i:i+3].lower()
-                if ngram.strip():
-                    char_ngrams.add(ngram)
-            
-            # 3. 词级2-gram（捕捉短语相似性）
-            word_ngrams = set()
-            for i in range(len(words) - 1):
-                bigram = f"{words[i]}_{words[i+1]}"
-                word_ngrams.add(bigram)
-            
-            return keywords, char_ngrams, word_ngrams
-        
-        new_keywords, new_char_ngrams, new_word_ngrams = _extract_features(topic)
-        
+        # 检查是否与历史重复（100%精确匹配才算重复）
         for old_topic in self._topic_history[-10:]:
-            # 精确匹配
-            if topic == old_topic:
-                logger.info("♥ 话题与历史精确重复，跳过本次跳动")
+            if topic.strip() == old_topic.strip():
+                logger.info("♥ 话题与历史精确重复（100%相同），跳过本次跳动")
                 return None
-            
-            # 多维度语义相似度检查
-            old_keywords, old_char_ngrams, old_word_ngrams = _extract_features(old_topic)
-            
-            # 1. 关键词重叠率（阈值35%，更敏感）
-            if old_keywords and new_keywords:
-                keyword_overlap = len(new_keywords & old_keywords) / max(len(new_keywords), len(old_keywords))
-                if keyword_overlap > 0.35:
-                    logger.info(f"♥ 话题与历史关键词相似(重叠率{keyword_overlap:.0%})，跳过本次跳动")
-                    return None
-            
-            # 2. 字符3-gram重叠率（阈值25%，更敏感）
-            if old_char_ngrams and new_char_ngrams:
-                char_overlap = len(new_char_ngrams & old_char_ngrams) / max(len(new_char_ngrams), len(old_char_ngrams))
-                if char_overlap > 0.25:
-                    logger.info(f"♥ 话题与历史字符级相似(重叠率{char_overlap:.0%})，跳过本次跳动")
-                    return None
-            
-            # 3. 词级2-gram重叠率（阈值20%，更敏感）
-            if old_word_ngrams and new_word_ngrams:
-                word_overlap = len(new_word_ngrams & old_word_ngrams) / max(len(new_word_ngrams), len(old_word_ngrams))
-                if word_overlap > 0.2:
-                    logger.info(f"♥ 话题与历史短语相似(重叠率{word_overlap:.0%})，跳过本次跳动")
-                    return None
         
         # 记录到历史
         self._topic_history.append(topic)

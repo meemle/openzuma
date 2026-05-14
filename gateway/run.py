@@ -2303,6 +2303,27 @@ class GatewayRunner:
             self.soulbeat.start()
             logger.info("♥ SoulBeat 灵魂跳动启动，每 %d 分钟跳动一次", self.soulbeat.interval_minutes)
 
+        # Start EAR (耳朵模块) if enabled in config
+        try:
+            _ear_cfg = _full_cfg.get("ear", {})
+            if _ear_cfg.get("enabled", False):
+                import subprocess
+                ear_script = os.path.expanduser("~/openzuma/ear/main.py")
+                if os.path.exists(ear_script):
+                    self._ear_process = subprocess.Popen(
+                        ["python3", "-u", ear_script],
+                        stdout=open("/data/data/com.termux/files/usr/tmp/ear.log", "a"),
+                        stderr=subprocess.STDOUT,
+                        cwd=os.path.dirname(ear_script),
+                    )
+                    logger.info("🎙️ 耳朵模块 (EAR) 已启动 (PID: %d)", self._ear_process.pid)
+                else:
+                    logger.warning("⚠️ 耳朵模块脚本不存在: %s", ear_script)
+            else:
+                logger.info("🎙️ 耳朵模块 (EAR) 未启用，跳过")
+        except Exception as e:
+            logger.warning("⚠️ 耳朵模块启动失败: %s", e)
+
         logger.info("Press Ctrl+C to stop")
         
         return True
@@ -2615,6 +2636,15 @@ class GatewayRunner:
             if self.soulbeat:
                 self.soulbeat.stop()
                 logger.info("♥ Soul stopped")
+
+            # Stop EAR (耳朵模块)
+            try:
+                ear_pid = getattr(self, '_ear_process', None)
+                if ear_pid and ear_pid.poll() is None:
+                    ear_pid.terminate()
+                    logger.info("🎙️ 耳朵模块 (EAR) 已停止")
+            except Exception as e:
+                logger.warning("⚠️ 耳朵模块停止失败: %s", e)
 
             # Notify all chats with active agents BEFORE draining.
             # Adapters are still connected here, so messages can be sent.
