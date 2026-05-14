@@ -2305,7 +2305,8 @@ class GatewayRunner:
 
         # Start EAR (耳朵模块) if enabled in config
         try:
-            _ear_cfg = _full_cfg.get("ear", {})
+            from openzuma_cli.config import load_config as _load_full_config_ear
+            _ear_cfg = _load_full_config_ear().get("ear", {})
             if _ear_cfg.get("enabled", False):
                 import subprocess
                 ear_script = os.path.expanduser("~/openzuma/ear/main.py")
